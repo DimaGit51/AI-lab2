@@ -25,7 +25,10 @@ namespace AIGraph
         private bool isPanning = false;             // зажато колесико
         private Point lastMousePos;                 // предыдущая позиция мыши
 
-
+        private TabPage exitTabPage;
+        private Label exitLabel;
+        private MaterialButton yesButton;
+        private MaterialButton noButton;
 
         private Panel canvasPanel;
 
@@ -34,20 +37,21 @@ namespace AIGraph
             InitializeComponent();
 
             // Настройка MaterialSkin
-            MaterialSkinManager materialSkinManager = MaterialSkinManager.Instance;
+            var materialSkinManager = MaterialSkinManager.Instance;
             materialSkinManager.AddFormToManage(this);
             materialSkinManager.Theme = MaterialSkinManager.Themes.LIGHT;
             materialSkinManager.ColorScheme = new ColorScheme(
                 Primary.BlueGrey800, Primary.BlueGrey900,
                 Primary.BlueGrey500, Accent.LightBlue200, TextShade.WHITE);
 
-            // Панель для рисования
+            // Привязка TabSelector к TabControl
+
             canvasPanel = new Panel
             {
                 Dock = DockStyle.Fill,
                 BackColor = Color.White
             };
-            Controls.Add(canvasPanel);
+            tabPage1.Controls.Add(canvasPanel);
 
             canvasPanel.MouseDown += CanvasPanel_MouseDown;
             canvasPanel.Paint += CanvasPanel_Paint;
@@ -290,5 +294,6 @@ namespace AIGraph
         }
 
 
+        
     }
 }
