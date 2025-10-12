@@ -7,6 +7,7 @@ using System.Windows.Forms;
 using AIGraph.Models;
 using AIGraph.Helpers;
 using AIGraph.UI;
+using System.Windows.Forms.DataVisualization.Charting;
 
 namespace AIGraph
 {
@@ -31,6 +32,9 @@ namespace AIGraph
         private MaterialButton noButton;
 
         private Panel canvasPanel;
+        private ComboBox sourceNodeComboBox;
+        private MaterialSkin.Controls.MaterialButton simulateButton;
+        private System.Windows.Forms.DataVisualization.Charting.Chart impulseChart;
 
         public Form1()
         {
@@ -156,6 +160,8 @@ namespace AIGraph
                         {
                             string nodeName = inputForm.NodeName;
                             nodes.Add(new Node(nodeName, canvasPoint));
+                            UpdateMatrix();
+                            UpdateSourceNodeComboBox();
                             canvasPanel.Invalidate();
                         }
                     }
@@ -165,10 +171,63 @@ namespace AIGraph
                 return;
             }
 
+            if (e.Button == MouseButtons.Right)
+            {
+                ContextMenuStrip menu = new ContextMenuStrip();
+                Node clickedNode = GraphHelper.GetNodeAt(nodes, GetCanvasPoint(e.Location), nodeRadius);
+
+                if (clickedNode != null)
+                {
+                    // Удалить узел
+                    ToolStripMenuItem deleteNodeItem = new ToolStripMenuItem("Удалить узел");
+                    deleteNodeItem.Click += (s, ev) =>
+                    {
+                        selectedNode = clickedNode;
+                        DeleteSelectedNode();
+                    };
+                    menu.Items.Add(deleteNodeItem);
+                }
+                else
+                {
+                    // Создать новый узел
+                    ToolStripMenuItem createNodeItem = new ToolStripMenuItem("Создать узел");
+                    createNodeItem.Click += delegate (object s, EventArgs ev)
+                    {
+                        Point canvasPoint = GetCanvasPoint(e.Location);
+                        using (NodeNameInputForm inputForm = new NodeNameInputForm(nodes))
+                        {
+                            if (inputForm.ShowDialog(this) == DialogResult.OK && !string.IsNullOrWhiteSpace(inputForm.NodeName))
+                            {
+                                string nodeName = inputForm.NodeName;
+                                nodes.Add(new Node(nodeName, canvasPoint));
+                                UpdateMatrix();
+                                UpdateSourceNodeComboBox();
+                                canvasPanel.Invalidate();
+                            }
+                        }
+                    };
+                    menu.Items.Add(createNodeItem);
+                }
+
+                menu.Show(canvasPanel, e.Location);
+            }
+
+            // Ctrl + ПКМ на ребро — удалить
+            if (e.Button == MouseButtons.Right && (ModifierKeys & Keys.Control) == Keys.Control)
+            {
+                Point p = GetCanvasPoint(e.Location);
+                Edge clickedEdge = GetEdgeAtPoint(p);
+                if (clickedEdge != null)
+                {
+                    edges.Remove(clickedEdge);
+                    UpdateMatrix();
+                    canvasPanel.Invalidate();
+                    return;
+                }
+            }
 
 
         }
-
 
         private void CanvasPanel_Paint(object sender, PaintEventArgs e)
         {
@@ -228,6 +287,7 @@ namespace AIGraph
                     node.Position.Y - nameSize.Height / 2);
             }
         }
+
         // Обработчик MouseMove — перемещение узла
         private void CanvasPanel_MouseMove(object sender, MouseEventArgs e)
         {
@@ -293,7 +353,277 @@ namespace AIGraph
             return new Point((int)x, (int)y);
         }
 
+        private void UpdateMatrix()
+        {
+            int N = nodes.Count;
+            for (int i = 0; i < N; i++)
+            {
+                matrixGrid.Columns.Add(i.ToString(), nodes[i].Name);
+            }
 
-        
+            for (int i = 0; i < N; i++)
+            {
+                matrixGrid.Rows.Add();
+                matrixGrid.Rows[i].HeaderCell.Value = nodes[i].Name;
+            }
+
+            // Заполняем веса
+            for (int i = 0; i < N; i++)
+            {
+                for (int j = 0; j < N; j++)
+                {
+                    var ni = nodes[i];
+                    var nj = nodes[j];
+                    double weight = 0;
+                    foreach (var e in edges)
+                    {
+                        if ((e.From == ni && e.To == nj) || (e.From == nj && e.To == ni))
+                            weight += e.Weight;
+                    }
+                    matrixGrid.Rows[i].Cells[j].Value = weight == 0 ? "" : weight.ToString("0.##");
+                }
+            }
+        }
+
+        private void MatrixGrid_CellValueChanged(object sender, DataGridViewCellEventArgs e)
+        {
+            if (e.RowIndex < 0 || e.ColumnIndex < 0) return;
+
+            var rowNode = nodes[e.RowIndex];
+            var colNode = nodes[e.ColumnIndex];
+
+            string val = matrixGrid.Rows[e.RowIndex].Cells[e.ColumnIndex].Value?.ToString();
+            if (string.IsNullOrWhiteSpace(val))
+            {
+                edges.RemoveAll(edge => (edge.From == rowNode && edge.To == colNode) ||
+                                        (edge.From == colNode && edge.To == rowNode));
+            }
+            else if (double.TryParse(val, out double weight))
+            {
+                var edge = edges.Find(edge => (edge.From == rowNode && edge.To == colNode) ||
+                                              (edge.From == colNode && edge.To == rowNode));
+                if (edge != null)
+                    edge.Weight = weight;
+                else
+                    edges.Add(new Edge(rowNode, colNode, weight));
+            }
+
+            UpdateMatrix();
+            canvasPanel.Invalidate();
+        }
+
+
+        private int CountConnectedComponents()
+        {
+            HashSet<Node> visited = new HashSet<Node>();
+            int count = 0;
+
+            foreach (var node in nodes)
+            {
+                if (!visited.Contains(node))
+                {
+                    DFS(node, visited);
+                    count++;
+                }
+            }
+            return count;
+        }
+
+        private void DFS(Node node, HashSet<Node> visited)
+        {
+            visited.Add(node);
+            foreach (var edge in edges)
+            {
+                Node neighbor = null;
+                if (edge.From == node) neighbor = edge.To;
+                else if (edge.To == node) neighbor = edge.From;
+
+                if (neighbor != null && !visited.Contains(neighbor))
+                    DFS(neighbor, visited);
+            }
+        }
+
+        private int GetCyclomaticNumber()
+        {
+            int E = edges.Count;
+            int N = nodes.Count;
+            int P = CountConnectedComponents();
+            return E - N + P;
+        }
+
+        private List<Node> FindArticulationPoints()
+        {
+            int time = 0;
+            Dictionary<Node, int> disc = new Dictionary<Node, int>();
+            Dictionary<Node, int> low = new Dictionary<Node, int>();
+            Dictionary<Node, Node> parent = new Dictionary<Node, Node>();
+            HashSet<Node> ap = new HashSet<Node>();
+
+            foreach (var node in nodes)
+            {
+                disc[node] = -1;
+                low[node] = -1;
+                parent[node] = null;
+            }
+
+            foreach (var node in nodes)
+            {
+                if (disc[node] == -1)
+                    APUtil(node, ref time, disc, low, parent, ap);
+            }
+
+            return new List<Node>(ap);
+        }
+
+        private void APUtil(Node u, ref int time, Dictionary<Node, int> disc, Dictionary<Node, int> low, Dictionary<Node, Node> parent, HashSet<Node> ap)
+        {
+            int children = 0;
+            disc[u] = low[u] = ++time;
+
+            foreach (var edge in edges)
+            {
+                Node v = null;
+                if (edge.From == u) v = edge.To;
+                else if (edge.To == u) v = edge.From;
+
+                if (v == null) continue;
+
+                if (disc[v] == -1)
+                {
+                    children++;
+                    parent[v] = u;
+                    APUtil(v, ref time, disc, low, parent, ap);
+
+                    low[u] = Math.Min(low[u], low[v]);
+
+                    if (parent[u] == null && children > 1)
+                        ap.Add(u);
+
+                    if (parent[u] != null && low[v] >= disc[u])
+                        ap.Add(u);
+                }
+                else if (v != parent[u])
+                {
+                    low[u] = Math.Min(low[u], disc[v]);
+                }
+            }
+        }
+
+        private void AnalyzeGraph()
+        {
+            int components = CountConnectedComponents();
+            int cyclomaticNumber = GetCyclomaticNumber();
+            var articulationPoints = FindArticulationPoints();
+            bool isStable = articulationPoints.Count == 0;
+
+            string msg = $"Компоненты связности: {components}\n" +
+                         $"Цикломатическое число: {cyclomaticNumber}\n" +
+                         $"Артикуляционные вершины: {(articulationPoints.Count == 0 ? "нет" : string.Join(", ", articulationPoints.ConvertAll(n => n.Name)))}\n" +
+                         $"Структурная устойчивость: {(isStable ? "устойчива" : "неустойчива")}";
+
+            MessageBox.Show(msg, "Анализ структуры графа", MessageBoxButtons.OK, MessageBoxIcon.Information);
+        }
+
+        private void SimulateImpulse(Node source)
+        {
+            int steps = 10; // количество шагов
+            Dictionary<Node, bool> active = new Dictionary<Node, bool>();
+            foreach (var n in nodes) active[n] = false;
+
+            List<List<string>> history = new List<List<string>>(); // активные узлы по шагам
+
+            active[source] = true;
+
+            for (int t = 0; t < steps; t++)
+            {
+                List<string> activeNodes = new List<string>();
+                foreach (var n in nodes)
+                    if (active[n])
+                        activeNodes.Add(n.Name);
+                history.Add(activeNodes);
+
+                // Распространение импульса
+                Dictionary<Node, bool> newActive = new Dictionary<Node, bool>(active);
+                foreach (var edge in edges)
+                {
+                    if (active[edge.From]) newActive[edge.To] = true;
+                    if (active[edge.To]) newActive[edge.From] = true;
+                }
+                active = newActive;
+            }
+
+            DrawImpulseChart(history);
+        }
+
+        private void DrawImpulseChart(List<List<string>> history)
+        {
+            impulseChart.Series.Clear();
+
+            foreach (var node in nodes)
+            {
+                var series = new System.Windows.Forms.DataVisualization.Charting.Series(node.Name)
+                {
+                    ChartType = System.Windows.Forms.DataVisualization.Charting.SeriesChartType.Line
+                };
+
+                for (int t = 0; t < history.Count; t++)
+                {
+                    double value = history[t].Contains(node.Name) ? 1 : 0;
+                    series.Points.AddXY(t, value);
+                }
+                impulseChart.Series.Add(series);
+            }
+        }
+
+        private void SimulateButton_Click(object sender, EventArgs e)
+        {
+            if (sourceNodeComboBox.SelectedIndex < 0) return;
+
+            string nodeName = sourceNodeComboBox.SelectedItem.ToString();
+            Node source = nodes.Find(n => n.Name == nodeName);
+            if (source == null) return;
+
+            SimulateImpulse(source);
+        }
+
+        private void DeleteSelectedNode()
+        {
+            if (selectedNode == null) return;
+
+            // Удаляем все рёбра, связанные с узлом
+            edges.RemoveAll(edge => edge.From == selectedNode || edge.To == selectedNode);
+
+            // Удаляем сам узел
+            nodes.Remove(selectedNode);
+            selectedNode = null;
+
+            UpdateMatrix();           // обновляем матрицу
+            UpdateSourceNodeComboBox(); // если используешь ComboBox для симуляции
+            canvasPanel.Invalidate(); // перерисовываем холст
+        }
+
+        private Edge GetEdgeAtPoint(Point p)
+        {
+            foreach (var edge in edges)
+            {
+                Point from = edge.From.Position;
+                Point to = edge.To.Position;
+                float dx = to.X - from.X;
+                float dy = to.Y - from.Y;
+                float length = (float)Math.Sqrt(dx * dx + dy * dy);
+                if (length < 0.001f) continue;
+
+                float t = ((p.X - from.X) * dx + (p.Y - from.Y) * dy) / (length * length);
+                t = Math.Max(0, Math.Min(1, t));
+                float closestX = from.X + t * dx;
+                float closestY = from.Y + t * dy;
+
+                float dist = (float)Math.Sqrt((p.X - closestX) * (p.X - closestX) + (p.Y - closestY) * (p.Y - closestY));
+                if (dist <= 5) return edge; // порог 5 пикселей
+            }
+            return null;
+        }
+
+
     }
 }

@@ -73,12 +73,87 @@
             Text = "AIGraph";
             tabControl1.ResumeLayout(false);
             ResumeLayout(false);
+
+            // Инициализация DataGridView для матрицы
+            matrixGrid = new DataGridView
+            {
+                Dock = DockStyle.Fill,
+                AllowUserToAddRows = false,
+                AutoSizeColumnsMode = DataGridViewAutoSizeColumnsMode.Fill
+            };
+            tabPage2.Controls.Add(matrixGrid);
+
+            // Обработка изменения значения в матрице
+            matrixGrid.CellValueChanged += MatrixGrid_CellValueChanged;
+            matrixGrid.CellEndEdit += (s, e) => matrixGrid.CommitEdit(DataGridViewDataErrorContexts.Commit);
+            UpdateMatrix();
+
+            // Кнопка "Анализ структуры"
+            analyzeButton = new MaterialSkin.Controls.MaterialButton
+            {
+                Text = "Анализ структуры",
+                Location = new Point(10, 10),
+                AutoSize = true
+            };
+            analyzeButton.Click += analyzeButton_Click;
+            this.Controls.Add(analyzeButton);
+
+            // ComboBox для выбора стартовой вершины
+            sourceNodeComboBox = new ComboBox
+            {
+                Location = new Point(10, 10),
+                Width = 150,
+                DropDownStyle = ComboBoxStyle.DropDownList
+            };
+            tabPage1.Controls.Add(sourceNodeComboBox);
+
+            // Кнопка запуска симуляции
+            simulateButton = new MaterialSkin.Controls.MaterialButton
+            {
+                Text = "Запустить импульс",
+                Location = new Point(170, 10),
+                AutoSize = true
+            };
+            simulateButton.Click += SimulateButton_Click;
+            tabPage1.Controls.Add(simulateButton);
+
+            // Chart для визуализации активности узлов
+            impulseChart = new System.Windows.Forms.DataVisualization.Charting.Chart
+            {
+                Location = new Point(10, 50),
+                Size = new Size(600, 250)
+            };
+            tabPage1.Controls.Add(impulseChart);
+
+            // Настройка Chart
+            var chartArea = new System.Windows.Forms.DataVisualization.Charting.ChartArea();
+            impulseChart.ChartAreas.Add(chartArea);
+            impulseChart.Legends.Add(new System.Windows.Forms.DataVisualization.Charting.Legend());
         }
+
+        private void analyzeButton_Click(object sender, EventArgs e)
+        {
+            AnalyzeGraph();
+        }
+
+        private void UpdateSourceNodeComboBox()
+        {
+            sourceNodeComboBox.Items.Clear();
+            foreach (var node in nodes)
+                sourceNodeComboBox.Items.Add(node.Name);
+
+            if (nodes.Count > 0)
+                sourceNodeComboBox.SelectedIndex = 0;
+        }
+
+
 
         #endregion
 
         private TabControl tabControl1;
         private TabPage tabPage1;
         private TabPage tabPage2;
+        private DataGridView matrixGrid;
+        private MaterialSkin.Controls.MaterialButton analyzeButton;
     }
 }
