@@ -93,6 +93,8 @@ namespace AIGraph
             canvasPanel.MouseWheel += CanvasPanel_MouseWheel;
             canvasPanel.Focus(); // чтобы получать событи€ колесика
 
+            this.KeyPreview = true; // форма будет получать событи€ клавиш
+            this.KeyDown += Form1_KeyDown;
         }
 
         private void CanvasPanel_MouseDown(object sender, MouseEventArgs e)
@@ -687,6 +689,40 @@ namespace AIGraph
             return null;
         }
 
+        private void Form1_KeyDown(object sender, KeyEventArgs e)
+        {
+            // Ctrl + S Ч сохранить
+            if (e.Control && e.KeyCode == Keys.S)
+            {
+                SaveFileDialog sfd = new SaveFileDialog
+                {
+                    Filter = "Graph Files (*.gb)|*.gb",
+                    DefaultExt = "gb"
+                };
+                if (sfd.ShowDialog() == DialogResult.OK)
+                {
+                    SaveLoad.SaveGraph(sfd.FileName, nodes, edges);
+                    MessageBox.Show("√раф сохранЄн!", "—охранение", MessageBoxButtons.OK, MessageBoxIcon.Information);
+                }
+            }
 
+            // Ctrl + O Ч открыть
+            if (e.Control && e.KeyCode == Keys.O)
+            {
+                OpenFileDialog ofd = new OpenFileDialog
+                {
+                    Filter = "Graph Files (*.gb)|*.gb",
+                    DefaultExt = "gb"
+                };
+                if (ofd.ShowDialog() == DialogResult.OK)
+                {
+                    SaveLoad.LoadGraph(ofd.FileName, out nodes, out edges);
+                    UpdateMatrix();
+                    UpdateSourceNodeComboBox();
+                    canvasPanel.Invalidate();
+                    MessageBox.Show("√раф загружен!", "«агрузка", MessageBoxButtons.OK, MessageBoxIcon.Information);
+                }
+            }
+        }
     }
 }
