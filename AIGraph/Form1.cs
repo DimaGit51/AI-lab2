@@ -162,7 +162,7 @@ namespace AIGraph
                     draggingNode = clicked;
                     Point mouseCanvas = GetCanvasPoint(e.Location);
                     dragOffset = new Point(mouseCanvas.X - clicked.Position.X, mouseCanvas.Y - clicked.Position.Y);
-                    clicked.IsSelected = true; // можно выдел€ть при начале перетаскивани€
+                    clicked.Click = true; // можно выдел€ть при начале перетаскивани€
                     panel.Invalidate();
                 }
                 else
@@ -315,6 +315,24 @@ namespace AIGraph
                     node.Position.X - nameSize.Width / 2,
                     node.Position.Y - nameSize.Height / 2);
             }
+            // ќтрисовка рамки вокруг выбранных узлов
+            foreach (var node in nodes)
+            {
+                if (node.Click)
+                {
+                    float margin = 6;
+                    float rectX = node.Position.X - nodeRadius - margin;
+                    float rectY = node.Position.Y - nodeRadius - margin;
+                    float rectSize = (nodeRadius + margin) * 2;
+
+                    using (Pen dashedPen = new Pen(Color.Black, 1))
+                    {
+                        dashedPen.DashStyle = System.Drawing.Drawing2D.DashStyle.Dash;
+                        g.DrawRectangle(dashedPen, rectX, rectY, rectSize, rectSize);
+                    }
+                }
+            }
+
         }
 
         // ќбработчик MouseMove Ч перемещение узла

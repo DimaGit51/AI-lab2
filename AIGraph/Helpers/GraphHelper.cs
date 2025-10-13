@@ -28,6 +28,7 @@ namespace AIGraph.Helpers
             for (int i = 0; i < nodes.Count; i++)
             {
                 nodes[i].IsSelected = false;
+                nodes[i].Click = false;
             }
         }
     }

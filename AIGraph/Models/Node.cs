@@ -11,6 +11,7 @@ namespace AIGraph.Models
         private string name;
         private Point position;
         private bool isSelected;
+        private bool click;
 
         public string Name
         {
@@ -30,11 +31,18 @@ namespace AIGraph.Models
             set { isSelected = value; }
         }
 
+        public bool Click
+        {
+            get { return click; }
+            set { click = value; }
+        }
+
         public Node(string name, Point position)
         {
             this.name = name;
             this.position = position;
             this.isSelected = false;
+            this.click = false;
         }
     }
 }
