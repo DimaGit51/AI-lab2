@@ -23,12 +23,19 @@ namespace AIGraph.Helpers
             return null;
         }
 
-        public static void ResetSelection(List<Node> nodes)
+        public static void ResetSelectionNode(List<Node> nodes)
         {
             for (int i = 0; i < nodes.Count; i++)
             {
                 nodes[i].IsSelected = false;
                 nodes[i].Click = false;
+            }
+        }
+        public static void ResetSelectionEdge(List<Edge> edges)
+        {
+            for (int i = 0; i < edges.Count; i++)
+            {
+                edges[i].IsSelected = false;
             }
         }
     }

@@ -11,6 +11,8 @@ namespace AIGraph.Models
         private Node from;
         private Node to;
         private double weight;
+        private bool isSelected;
+
 
         public Node From
         {
@@ -30,11 +32,18 @@ namespace AIGraph.Models
             set { weight = value; }
         }
 
+        public bool IsSelected
+        {
+            get { return isSelected; }
+            set { isSelected = value; }
+        }
+
         public Edge(Node from, Node to, double weight = 1)
         {
             this.from = from;
             this.to = to;
             this.weight = weight;
+            this.isSelected = false;
         }
     }
 }

@@ -1,13 +1,14 @@
+using AIGraph.Helpers;
+using AIGraph.Models;
+using AIGraph.UI;
 using MaterialSkin;
 using MaterialSkin.Controls;
 using System;
 using System.Collections.Generic;
 using System.Drawing;
 using System.Windows.Forms;
-using AIGraph.Models;
-using AIGraph.Helpers;
-using AIGraph.UI;
 using System.Windows.Forms.DataVisualization.Charting;
+using static System.ComponentModel.Design.ObjectSelectorEditor;
 
 namespace AIGraph
 {
@@ -143,7 +144,8 @@ namespace AIGraph
                         }
 
                         // Сбрасываем выделение вне зависимости от результата
-                        GraphHelper.ResetSelection(nodes);
+                        GraphHelper.ResetSelectionNode(nodes);
+                        GraphHelper.ResetSelectionEdge(edges);
                         selectedNode = null;
                         panel.Invalidate();
                         UpdateMatrix();
@@ -169,9 +171,24 @@ namespace AIGraph
                 }
                 else
                 {
-                    // Если кликнули в пустое место — снимаем выделение
-                    GraphHelper.ResetSelection(nodes);
-                    panel.Invalidate();
+                    // Проверка на ребро
+                    Point p = GetCanvasPoint(e.Location);
+                    Edge clickedEdge = GetEdgeAtPoint(p);
+                    if (clickedEdge != null)
+                    {
+                        clickedEdge.IsSelected = true;
+
+
+                        canvasPanel.Invalidate();
+                    }
+                    else
+                    {
+                        // Если кликнули в пустое место — снимаем выделение узлов и ребер
+                        GraphHelper.ResetSelectionNode(nodes);
+                        GraphHelper.ResetSelectionEdge(edges);
+                        selectedNode = null;
+                        canvasPanel.Invalidate();
+                    }
                 }
                 return;
             }
@@ -268,14 +285,9 @@ namespace AIGraph
             g.ScaleTransform(zoomFactor, zoomFactor);
             g.TranslateTransform(panOffset.X, panOffset.Y);
 
-
-            Pen pen = new Pen(Color.Black, 2);
-            pen.CustomEndCap = new System.Drawing.Drawing2D.AdjustableArrowCap(6, 8);
-
             // Рисуем связи
-            for (int i = 0; i < edges.Count; i++)
+            foreach (var edge in edges)
             {
-                Edge edge = edges[i];
                 Point from = edge.From.Position;
                 Point to = edge.To.Position;
 
@@ -290,7 +302,29 @@ namespace AIGraph
                 PointF start = new PointF(from.X + offsetX, from.Y + offsetY);
                 PointF end = new PointF(to.X - offsetX, to.Y - offsetY);
 
-                g.DrawLine(pen, start, end);
+                using (Pen pen = new Pen(Color.Black, 2))
+                {
+                    pen.CustomEndCap = new System.Drawing.Drawing2D.AdjustableArrowCap(6, 8);
+
+                    // Настраиваем штриховку
+                    if (edge.Weight < 0 && edge.IsSelected)
+                    {
+                        // Отрицательная + выделенная
+                        pen.DashPattern = new float[] { 4, 2 };
+                    }
+                    else if (edge.Weight < 0)
+                    {
+                        // Только отрицательная
+                        pen.DashPattern = new float[] { 8, 6 };
+                    }
+                    else if (edge.IsSelected)
+                    {
+                        // Только выделенная
+                        pen.DashStyle = System.Drawing.Drawing2D.DashStyle.Dash;
+                    }
+
+                    g.DrawLine(pen, start, end);
+                }
 
                 // Вес над линией
                 float midX = (start.X + end.X) / 2;
@@ -302,9 +336,8 @@ namespace AIGraph
             }
 
             // Рисуем узлы
-            for (int i = 0; i < nodes.Count; i++)
+            foreach (var node in nodes)
             {
-                Node node = nodes[i];
                 float x = node.Position.X - nodeRadius;
                 float y = node.Position.Y - nodeRadius;
 
@@ -317,7 +350,8 @@ namespace AIGraph
                     node.Position.X - nameSize.Width / 2,
                     node.Position.Y - nameSize.Height / 2);
             }
-            // Отрисовка рамки вокруг выбранных узлов
+
+            // Рамка вокруг выбранных узлов
             foreach (var node in nodes)
             {
                 if (node.Click)
@@ -334,8 +368,9 @@ namespace AIGraph
                     }
                 }
             }
-
         }
+
+
 
         // Обработчик MouseMove — перемещение узла
         private void CanvasPanel_MouseMove(object sender, MouseEventArgs e)
@@ -696,7 +731,7 @@ namespace AIGraph
             {
                 SaveFileDialog sfd = new SaveFileDialog
                 {
-                    Filter = "Graph Files (*.gb)|*.gb",
+                    Filter = "Graph Board Files (*.gb)|*.gb",
                     DefaultExt = "gb"
                 };
                 if (sfd.ShowDialog() == DialogResult.OK)
@@ -711,7 +746,7 @@ namespace AIGraph
             {
                 OpenFileDialog ofd = new OpenFileDialog
                 {
-                    Filter = "Graph Files (*.gb)|*.gb",
+                    Filter = "Graph Board Files (*.gb)|*.gb",
                     DefaultExt = "gb"
                 };
                 if (ofd.ShowDialog() == DialogResult.OK)
@@ -723,6 +758,38 @@ namespace AIGraph
                     MessageBox.Show("Граф загружен!", "Загрузка", MessageBoxButtons.OK, MessageBoxIcon.Information);
                 }
             }
+            if (e.KeyCode == Keys.Delete)
+            {
+                DeleteSelectedObjects();
+            }
         }
+        private void DeleteSelectedObjects()
+        {
+            // Удаляем все рёбра, которые выделены
+            edges.RemoveAll(edge => edge.IsSelected);
+
+            // Удаляем все узлы, которые выделены
+            nodes.RemoveAll(node =>
+            {
+                if (node.Click)
+                {
+                    // Удаляем все рёбра, связанные с этим узлом
+                    edges.RemoveAll(edge => edge.From == node || edge.To == node);
+                    return true;
+                }
+                return false;
+            });
+
+            // Сброс выделения
+            foreach (var node in nodes)
+                node.Click = false;
+            foreach (var edge in edges)
+                edge.IsSelected = false;
+
+            UpdateMatrix();
+            UpdateSourceNodeComboBox();
+            canvasPanel.Invalidate();
+        }
+
     }
 }
