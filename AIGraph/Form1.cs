@@ -1,4 +1,4 @@
-using AIGraph.Helpers;
+п»їusing AIGraph.Helpers;
 using AIGraph.Models;
 using AIGraph.UI;
 using MaterialSkin;
@@ -9,6 +9,7 @@ using System.Drawing;
 using System.Windows.Forms;
 using System.Windows.Forms.DataVisualization.Charting;
 using static System.ComponentModel.Design.ObjectSelectorEditor;
+using MathNet.Numerics.LinearAlgebra;
 
 namespace AIGraph
 {
@@ -21,11 +22,11 @@ namespace AIGraph
         private bool isDragging = false;
         private Node draggingNode = null;
         private Point dragOffset;
-        private float zoomFactor = 1.0f;       // текущий масштаб
-        private const float zoomStep = 0.1f;   // шаг масштабирования
-        private PointF panOffset = new PointF(0, 0); // смещение холста
-        private bool isPanning = false;             // зажато колесико
-        private Point lastMousePos;                 // предыдущая позиция мыши
+        private float zoomFactor = 1.0f;       // С‚РµРєСѓС‰РёР№ РјР°СЃС€С‚Р°Р±
+        private const float zoomStep = 0.1f;   // С€Р°Рі РјР°СЃС€С‚Р°Р±РёСЂРѕРІР°РЅРёСЏ
+        private PointF panOffset = new PointF(0, 0); // СЃРјРµС‰РµРЅРёРµ С…РѕР»СЃС‚Р°
+        private bool isPanning = false;             // Р·Р°Р¶Р°С‚Рѕ РєРѕР»РµСЃРёРєРѕ
+        private Point lastMousePos;                 // РїСЂРµРґС‹РґСѓС‰Р°СЏ РїРѕР·РёС†РёСЏ РјС‹С€Рё
 
         private TabPage exitTabPage;
         private Label exitLabel;
@@ -41,8 +42,8 @@ namespace AIGraph
         {
             InitializeComponent();
 
-            // ====== Перенес кусок кода сюда ====== до UpdateMatrix(); <<<
-            // === DataGridView для матрицы ===
+            // ====== РџРµСЂРµРЅРµСЃ РєСѓСЃРѕРє РєРѕРґР° СЃСЋРґР° ====== РґРѕ UpdateMatrix(); <<<
+            // === DataGridView РґР»СЏ РјР°С‚СЂРёС†С‹ ===
             matrixGrid = new DataGridView
             {
                 Dock = DockStyle.Fill,
@@ -54,7 +55,7 @@ namespace AIGraph
             matrixGrid.CellValueChanged += MatrixGrid_CellValueChanged;
             matrixGrid.CellEndEdit += (s, e) => matrixGrid.CommitEdit(DataGridViewDataErrorContexts.Commit);
 
-            // === Chart для визуализации активности узлов ===
+            // === Chart РґР»СЏ РІРёР·СѓР°Р»РёР·Р°С†РёРё Р°РєС‚РёРІРЅРѕСЃС‚Рё СѓР·Р»РѕРІ ===
             impulseChart = new System.Windows.Forms.DataVisualization.Charting.Chart
             {
                 Location = new Point(10, 50),
@@ -66,11 +67,11 @@ namespace AIGraph
             impulseChart.ChartAreas.Add(chartArea);
             impulseChart.Legends.Add(new System.Windows.Forms.DataVisualization.Charting.Legend());
 
-            // === Обновляем матрицу при запуске ===
+            // === РћР±РЅРѕРІР»СЏРµРј РјР°С‚СЂРёС†Сѓ РїСЂРё Р·Р°РїСѓСЃРєРµ ===
             UpdateMatrix();
-            // ====== Перенес кусок кода сюда ====== >>>
+            // ====== РџРµСЂРµРЅРµСЃ РєСѓСЃРѕРє РєРѕРґР° СЃСЋРґР° ====== >>>
 
-            // Настройка MaterialSkin
+            // РќР°СЃС‚СЂРѕР№РєР° MaterialSkin
             var materialSkinManager = MaterialSkinManager.Instance;
             materialSkinManager.AddFormToManage(this);
             materialSkinManager.Theme = MaterialSkinManager.Themes.LIGHT;
@@ -78,7 +79,7 @@ namespace AIGraph
                 Primary.BlueGrey800, Primary.BlueGrey900,
                 Primary.BlueGrey500, Accent.LightBlue200, TextShade.WHITE);
 
-            // Привязка TabSelector к TabControl
+            // РџСЂРёРІСЏР·РєР° TabSelector Рє TabControl
 
             canvasPanel = new Panel
             {
@@ -92,9 +93,9 @@ namespace AIGraph
             canvasPanel.MouseMove += CanvasPanel_MouseMove;
             canvasPanel.MouseUp += CanvasPanel_MouseUp;
             canvasPanel.MouseWheel += CanvasPanel_MouseWheel;
-            canvasPanel.Focus(); // чтобы получать события колесика
+            canvasPanel.Focus(); // С‡С‚РѕР±С‹ РїРѕР»СѓС‡Р°С‚СЊ СЃРѕР±С‹С‚РёСЏ РєРѕР»РµСЃРёРєР°
 
-            this.KeyPreview = true; // форма будет получать события клавиш
+            this.KeyPreview = true; // С„РѕСЂРјР° Р±СѓРґРµС‚ РїРѕР»СѓС‡Р°С‚СЊ СЃРѕР±С‹С‚РёСЏ РєР»Р°РІРёС€
             this.KeyDown += Form1_KeyDown;
         }
 
@@ -106,29 +107,29 @@ namespace AIGraph
 
 
 
-            // Начало панорамирования (средняя кнопка)
+            // РќР°С‡Р°Р»Рѕ РїР°РЅРѕСЂР°РјРёСЂРѕРІР°РЅРёСЏ (СЃСЂРµРґРЅСЏСЏ РєРЅРѕРїРєР°)
             if (e.Button == MouseButtons.Middle)
             {
                 isPanning = true;
                 lastMousePos = e.Location;
-                canvasPanel.Cursor = Cursors.SizeAll; // курсор руки
+                canvasPanel.Cursor = Cursors.SizeAll; // РєСѓСЂСЃРѕСЂ СЂСѓРєРё
                 return;
             }
 
 
-            // Ctrl + ЛКМ — создание связи
+            // Ctrl + Р›РљРњ вЂ” СЃРѕР·РґР°РЅРёРµ СЃРІСЏР·Рё
             if (e.Button == MouseButtons.Left && (ModifierKeys & Keys.Control) == Keys.Control && clicked != null)
             {
                 if (selectedNode == null)
                 {
-                    // Первый выбранный узел
+                    // РџРµСЂРІС‹Р№ РІС‹Р±СЂР°РЅРЅС‹Р№ СѓР·РµР»
                     selectedNode = clicked;
                     clicked.IsSelected = true;
                     panel.Invalidate();
                 }
                 else if (selectedNode != clicked)
                 {
-                    // Второй узел — открываем окно для ввода веса
+                    // Р’С‚РѕСЂРѕР№ СѓР·РµР» вЂ” РѕС‚РєСЂС‹РІР°РµРј РѕРєРЅРѕ РґР»СЏ РІРІРѕРґР° РІРµСЃР°
                     clicked.IsSelected = true;
                     panel.Invalidate();
 
@@ -143,35 +144,35 @@ namespace AIGraph
                             edges.Add(newEdge);
                         }
 
-                        // Сбрасываем выделение вне зависимости от результата
+                        // РЎР±СЂР°СЃС‹РІР°РµРј РІС‹РґРµР»РµРЅРёРµ РІРЅРµ Р·Р°РІРёСЃРёРјРѕСЃС‚Рё РѕС‚ СЂРµР·СѓР»СЊС‚Р°С‚Р°
                         GraphHelper.ResetSelectionNode(nodes);
                         GraphHelper.ResetSelectionEdge(edges);
                         selectedNode = null;
                         panel.Invalidate();
                         UpdateMatrix();
-                        // Восстанавливаем фокус на холст
+                        // Р’РѕСЃСЃС‚Р°РЅР°РІР»РёРІР°РµРј С„РѕРєСѓСЃ РЅР° С…РѕР»СЃС‚
                         panel.Focus();
                     }
                 }
                 return;
             }
 
-            // ЛКМ без Ctrl — начинаем перетаскивание или выделение
+            // Р›РљРњ Р±РµР· Ctrl вЂ” РЅР°С‡РёРЅР°РµРј РїРµСЂРµС‚Р°СЃРєРёРІР°РЅРёРµ РёР»Рё РІС‹РґРµР»РµРЅРёРµ
             if (e.Button == MouseButtons.Left && (ModifierKeys & Keys.Control) != Keys.Control)
             {
                 if (clicked != null)
                 {
-                    // Начало перетаскивания
+                    // РќР°С‡Р°Р»Рѕ РїРµСЂРµС‚Р°СЃРєРёРІР°РЅРёСЏ
                     isDragging = true;
                     draggingNode = clicked;
                     Point mouseCanvas = GetCanvasPoint(e.Location);
                     dragOffset = new Point(mouseCanvas.X - clicked.Position.X, mouseCanvas.Y - clicked.Position.Y);
-                    clicked.Click = true; // можно выделять при начале перетаскивания
+                    clicked.Click = true; // РјРѕР¶РЅРѕ РІС‹РґРµР»СЏС‚СЊ РїСЂРё РЅР°С‡Р°Р»Рµ РїРµСЂРµС‚Р°СЃРєРёРІР°РЅРёСЏ
                     panel.Invalidate();
                 }
                 else
                 {
-                    // Проверка на ребро
+                    // РџСЂРѕРІРµСЂРєР° РЅР° СЂРµР±СЂРѕ
                     Point p = GetCanvasPoint(e.Location);
                     Edge clickedEdge = GetEdgeAtPoint(p);
                     if (clickedEdge != null)
@@ -183,7 +184,7 @@ namespace AIGraph
                     }
                     else
                     {
-                        // Если кликнули в пустое место — снимаем выделение узлов и ребер
+                        // Р•СЃР»Рё РєР»РёРєРЅСѓР»Рё РІ РїСѓСЃС‚РѕРµ РјРµСЃС‚Рѕ вЂ” СЃРЅРёРјР°РµРј РІС‹РґРµР»РµРЅРёРµ СѓР·Р»РѕРІ Рё СЂРµР±РµСЂ
                         GraphHelper.ResetSelectionNode(nodes);
                         GraphHelper.ResetSelectionEdge(edges);
                         selectedNode = null;
@@ -193,11 +194,11 @@ namespace AIGraph
                 return;
             }
 
-            // ПКМ — меню создания узла
+            // РџРљРњ вЂ” РјРµРЅСЋ СЃРѕР·РґР°РЅРёСЏ СѓР·Р»Р°
             if (e.Button == MouseButtons.Right)
             {
                 ContextMenuStrip menu = new ContextMenuStrip();
-                ToolStripMenuItem createNodeItem = new ToolStripMenuItem("Создать узел");
+                ToolStripMenuItem createNodeItem = new ToolStripMenuItem("РЎРѕР·РґР°С‚СЊ СѓР·РµР»");
                 createNodeItem.Click += delegate (object s, EventArgs ev)
                 {
                     Point canvasPoint = GetCanvasPoint(e.Location);
@@ -226,8 +227,8 @@ namespace AIGraph
 
                 if (clickedNode != null)
                 {
-                    // Удалить узел
-                    ToolStripMenuItem deleteNodeItem = new ToolStripMenuItem("Удалить узел");
+                    // РЈРґР°Р»РёС‚СЊ СѓР·РµР»
+                    ToolStripMenuItem deleteNodeItem = new ToolStripMenuItem("РЈРґР°Р»РёС‚СЊ СѓР·РµР»");
                     deleteNodeItem.Click += (s, ev) =>
                     {
                         selectedNode = clickedNode;
@@ -237,8 +238,8 @@ namespace AIGraph
                 }
                 else
                 {
-                    // Создать новый узел
-                    ToolStripMenuItem createNodeItem = new ToolStripMenuItem("Создать узел");
+                    // РЎРѕР·РґР°С‚СЊ РЅРѕРІС‹Р№ СѓР·РµР»
+                    ToolStripMenuItem createNodeItem = new ToolStripMenuItem("РЎРѕР·РґР°С‚СЊ СѓР·РµР»");
                     createNodeItem.Click += delegate (object s, EventArgs ev)
                     {
                         Point canvasPoint = GetCanvasPoint(e.Location);
@@ -260,7 +261,7 @@ namespace AIGraph
                 menu.Show(canvasPanel, e.Location);
             }
 
-            // Ctrl + ПКМ на ребро — удалить
+            // Ctrl + РџРљРњ РЅР° СЂРµР±СЂРѕ вЂ” СѓРґР°Р»РёС‚СЊ
             if (e.Button == MouseButtons.Right && (ModifierKeys & Keys.Control) == Keys.Control)
             {
                 Point p = GetCanvasPoint(e.Location);
@@ -285,7 +286,7 @@ namespace AIGraph
             g.ScaleTransform(zoomFactor, zoomFactor);
             g.TranslateTransform(panOffset.X, panOffset.Y);
 
-            // Рисуем связи
+            // Р РёСЃСѓРµРј СЃРІСЏР·Рё
             foreach (var edge in edges)
             {
                 Point from = edge.From.Position;
@@ -306,27 +307,27 @@ namespace AIGraph
                 {
                     pen.CustomEndCap = new System.Drawing.Drawing2D.AdjustableArrowCap(6, 8);
 
-                    // Настраиваем штриховку
+                    // РќР°СЃС‚СЂР°РёРІР°РµРј С€С‚СЂРёС…РѕРІРєСѓ
                     if (edge.Weight < 0 && edge.IsSelected)
                     {
-                        // Отрицательная + выделенная
+                        // РћС‚СЂРёС†Р°С‚РµР»СЊРЅР°СЏ + РІС‹РґРµР»РµРЅРЅР°СЏ
                         pen.DashPattern = new float[] { 4, 2 };
                     }
                     else if (edge.Weight < 0)
                     {
-                        // Только отрицательная
+                        // РўРѕР»СЊРєРѕ РѕС‚СЂРёС†Р°С‚РµР»СЊРЅР°СЏ
                         pen.DashPattern = new float[] { 8, 6 };
                     }
                     else if (edge.IsSelected)
                     {
-                        // Только выделенная
+                        // РўРѕР»СЊРєРѕ РІС‹РґРµР»РµРЅРЅР°СЏ
                         pen.DashStyle = System.Drawing.Drawing2D.DashStyle.Dash;
                     }
 
                     g.DrawLine(pen, start, end);
                 }
 
-                // Вес над линией
+                // Р’РµСЃ РЅР°Рґ Р»РёРЅРёРµР№
                 float midX = (start.X + end.X) / 2;
                 float midY = (start.Y + end.Y) / 2;
                 string weightText = edge.Weight.ToString("0.00");
@@ -335,7 +336,7 @@ namespace AIGraph
                     midX - textSize.Width / 2, midY - textSize.Height / 2 - 10);
             }
 
-            // Рисуем узлы
+            // Р РёСЃСѓРµРј СѓР·Р»С‹
             foreach (var node in nodes)
             {
                 float x = node.Position.X - nodeRadius;
@@ -351,7 +352,7 @@ namespace AIGraph
                     node.Position.Y - nameSize.Height / 2);
             }
 
-            // Рамка вокруг выбранных узлов
+            // Р Р°РјРєР° РІРѕРєСЂСѓРі РІС‹Р±СЂР°РЅРЅС‹С… СѓР·Р»РѕРІ
             foreach (var node in nodes)
             {
                 if (node.Click)
@@ -372,10 +373,10 @@ namespace AIGraph
 
 
 
-        // Обработчик MouseMove — перемещение узла
+        // РћР±СЂР°Р±РѕС‚С‡РёРє MouseMove вЂ” РїРµСЂРµРјРµС‰РµРЅРёРµ СѓР·Р»Р°
         private void CanvasPanel_MouseMove(object sender, MouseEventArgs e)
         {
-            // Панорамирование
+            // РџР°РЅРѕСЂР°РјРёСЂРѕРІР°РЅРёРµ
             if (isPanning)
             {
                 float dx = (e.X - lastMousePos.X) / zoomFactor;
@@ -397,10 +398,10 @@ namespace AIGraph
             }
         }
 
-        // Обработчик MouseUp — завершение перетаскивания
+        // РћР±СЂР°Р±РѕС‚С‡РёРє MouseUp вЂ” Р·Р°РІРµСЂС€РµРЅРёРµ РїРµСЂРµС‚Р°СЃРєРёРІР°РЅРёСЏ
         private void CanvasPanel_MouseUp(object sender, MouseEventArgs e)
         {
-            // Завершение панорамирования
+            // Р—Р°РІРµСЂС€РµРЅРёРµ РїР°РЅРѕСЂР°РјРёСЂРѕРІР°РЅРёСЏ
             if (e.Button == MouseButtons.Middle)
             {
                 isPanning = false;
@@ -424,8 +425,8 @@ namespace AIGraph
                 else
                     zoomFactor -= zoomStep;
 
-                if (zoomFactor < 0.1f) zoomFactor = 0.1f; // минимальный масштаб
-                if (zoomFactor > 5.0f) zoomFactor = 5.0f; // максимальный масштаб
+                if (zoomFactor < 0.1f) zoomFactor = 0.1f; // РјРёРЅРёРјР°Р»СЊРЅС‹Р№ РјР°СЃС€С‚Р°Р±
+                if (zoomFactor > 5.0f) zoomFactor = 5.0f; // РјР°РєСЃРёРјР°Р»СЊРЅС‹Р№ РјР°СЃС€С‚Р°Р±
 
                 canvasPanel.Invalidate();
             }
@@ -441,7 +442,7 @@ namespace AIGraph
         {
             if (matrixGrid == null) return;
 
-            // временно отключаем событие, чтобы не было рекурсии
+            // РІСЂРµРјРµРЅРЅРѕ РѕС‚РєР»СЋС‡Р°РµРј СЃРѕР±С‹С‚РёРµ, С‡С‚РѕР±С‹ РЅРµ Р±С‹Р»Рѕ СЂРµРєСѓСЂСЃРёРё
             matrixGrid.CellValueChanged -= MatrixGrid_CellValueChanged;
 
             matrixGrid.Columns.Clear();
@@ -449,18 +450,18 @@ namespace AIGraph
 
             int N = nodes.Count;
 
-            // создаём колонки
+            // СЃРѕР·РґР°С‘Рј РєРѕР»РѕРЅРєРё
             for (int i = 0; i < N; i++)
                 matrixGrid.Columns.Add(i.ToString(), nodes[i].Name);
 
-            // создаём строки и заголовки
+            // СЃРѕР·РґР°С‘Рј СЃС‚СЂРѕРєРё Рё Р·Р°РіРѕР»РѕРІРєРё
             for (int i = 0; i < N; i++)
             {
                 matrixGrid.Rows.Add();
                 matrixGrid.Rows[i].HeaderCell.Value = nodes[i].Name;
             }
 
-            // заполняем веса
+            // Р·Р°РїРѕР»РЅСЏРµРј РІРµСЃР°
             for (int i = 0; i < N; i++)
             {
                 for (int j = 0; j < N; j++)
@@ -479,10 +480,61 @@ namespace AIGraph
                 }
             }
 
-            // возвращаем обработчик обратно
+            // РІРѕР·РІСЂР°С‰Р°РµРј РѕР±СЂР°Р±РѕС‚С‡РёРє РѕР±СЂР°С‚РЅРѕ
             matrixGrid.CellValueChanged += MatrixGrid_CellValueChanged;
         }
 
+        private double[,] BuildAdjacencyMatrix()
+        {
+            int N = nodes.Count;
+            double[,] matrix = new double[N, N];
+
+            for (int i = 0; i < N; i++)
+            {
+                for (int j = 0; j < N; j++)
+                    matrix[i, j] = 0;
+            }
+
+            foreach (var edge in edges)
+            {
+                int from = nodes.IndexOf(edge.From);
+                int to = nodes.IndexOf(edge.To);
+
+                if (from >= 0 && to >= 0)
+                {
+                    // Р’РµСЃ СЃРІСЏР·Рё From в†’ To
+                    matrix[to, from] = edge.Weight;
+                }
+            }
+
+            return matrix;
+        }
+
+        private string AnalyzeSpectralStability()
+        {
+            if (nodes.Count == 0)
+                return "РќРµС‚ РІРµСЂС€РёРЅ РґР»СЏ Р°РЅР°Р»РёР·Р°.\n";
+
+            double[,] M = BuildAdjacencyMatrix();
+            var matrix = Matrix<double>.Build.DenseOfArray(M);
+            var evd = matrix.Evd();
+
+            var eigenvalues = evd.EigenValues;
+            double spectralRadius = eigenvalues.Select(ev => ev.Magnitude).Max();
+
+            string eigenStr = string.Join(", ", eigenvalues.Select(ev => $"{ev.Real:F2}{(ev.Imaginary >= 0 ? "+" : "")}{ev.Imaginary:F2}i"));
+
+            string result = "=== РЎРџР•РљРўР РђР›Р¬РќР«Р™ РђРќРђР›РР— ===\n";
+            result += $"РЎРѕР±СЃС‚РІРµРЅРЅС‹Рµ Р·РЅР°С‡РµРЅРёСЏ: {eigenStr}\n";
+            result += $"РЎРїРµРєС‚СЂР°Р»СЊРЅС‹Р№ СЂР°РґРёСѓСЃ (|О»max|): {spectralRadius:F3}\n";
+
+            if (spectralRadius < 1)
+                result += "РњРѕРґРµР»СЊ СѓСЃС‚РѕР№С‡РёРІР° РїРѕ СЃРїРµРєС‚СЂР°Р»СЊРЅРѕРјСѓ РєСЂРёС‚РµСЂРёСЋ (|О»max| < 1)\n";
+            else
+                result += "РњРѕРґРµР»СЊ РЅРµСѓСЃС‚РѕР№С‡РёРІР° РїРѕ СЃРїРµРєС‚СЂР°Р»СЊРЅРѕРјСѓ РєСЂРёС‚РµСЂРёСЋ (|О»max| > 1)\n";
+
+            return result;
+        }
 
 
         private void MatrixGrid_CellValueChanged(object sender, DataGridViewCellEventArgs e)
@@ -611,26 +663,34 @@ namespace AIGraph
 
         private void AnalyzeGraph()
         {
+            // === РўРћРџРћР›РћР“РР§Р•РЎРљРР™ РђРќРђР›РР— ===
             int components = CountConnectedComponents();
             int cyclomaticNumber = GetCyclomaticNumber();
             var articulationPoints = FindArticulationPoints();
-            bool isStable = articulationPoints.Count == 0;
+            bool isTopologicallyStable = articulationPoints.Count == 0;
 
-            string msg = $"Компоненты связности: {components}\n" +
-                         $"Цикломатическое число: {cyclomaticNumber}\n" +
-                         $"Артикуляционные вершины: {(articulationPoints.Count == 0 ? "нет" : string.Join(", ", articulationPoints.ConvertAll(n => n.Name)))}\n" +
-                         $"Структурная устойчивость: {(isStable ? "устойчива" : "неустойчива")}";
+            string topologicalInfo =
+                "=== РўРћРџРћР›РћР“РР§Р•РЎРљРР™ РђРќРђР›РР— ===\n" +
+                $"РљРѕРјРїРѕРЅРµРЅС‚С‹ СЃРІСЏР·РЅРѕСЃС‚Рё: {components}\n" +
+                $"Р¦РёРєР»РѕРјР°С‚РёС‡РµСЃРєРѕРµ С‡РёСЃР»Рѕ: {cyclomaticNumber}\n" +
+                $"РђСЂС‚РёРєСѓР»СЏС†РёРѕРЅРЅС‹Рµ РІРµСЂС€РёРЅС‹: {(articulationPoints.Count == 0 ? "РЅРµС‚" : string.Join(", ", articulationPoints.ConvertAll(n => n.Name)))}\n" +
+                $"РЎС‚СЂСѓРєС‚СѓСЂРЅР°СЏ СѓСЃС‚РѕР№С‡РёРІРѕСЃС‚СЊ (РїРѕ С‚РѕРїРѕР»РѕРіРёРё): {(isTopologicallyStable ? "СѓСЃС‚РѕР№С‡РёРІР°" : "РЅРµСѓСЃС‚РѕР№С‡РёРІР°")}\n\n";
 
-            MessageBox.Show(msg, "Анализ структуры графа", MessageBoxButtons.OK, MessageBoxIcon.Information);
+            // === РЎРџР•РљРўР РђР›Р¬РќР«Р™ РђРќРђР›РР— ===
+            string spectralInfo = AnalyzeSpectralStability();
+
+            // === РРўРћР“ ===
+            string finalResult = topologicalInfo + spectralInfo;
+            MessageBox.Show(finalResult, "РђРЅР°Р»РёР· СѓСЃС‚РѕР№С‡РёРІРѕСЃС‚Рё", MessageBoxButtons.OK, MessageBoxIcon.Information);
         }
 
         private void SimulateImpulse(Node source)
         {
-            int steps = 10; // количество шагов
+            int steps = 10; // РєРѕР»РёС‡РµСЃС‚РІРѕ С€Р°РіРѕРІ
             Dictionary<Node, bool> active = new Dictionary<Node, bool>();
             foreach (var n in nodes) active[n] = false;
 
-            List<List<string>> history = new List<List<string>>(); // активные узлы по шагам
+            List<List<string>> history = new List<List<string>>(); // Р°РєС‚РёРІРЅС‹Рµ СѓР·Р»С‹ РїРѕ С€Р°РіР°Рј
 
             active[source] = true;
 
@@ -642,7 +702,7 @@ namespace AIGraph
                         activeNodes.Add(n.Name);
                 history.Add(activeNodes);
 
-                // Распространение импульса
+                // Р Р°СЃРїСЂРѕСЃС‚СЂР°РЅРµРЅРёРµ РёРјРїСѓР»СЊСЃР°
                 Dictionary<Node, bool> newActive = new Dictionary<Node, bool>(active);
                 foreach (var edge in edges)
                 {
@@ -690,16 +750,16 @@ namespace AIGraph
         {
             if (selectedNode == null) return;
 
-            // Удаляем все рёбра, связанные с узлом
+            // РЈРґР°Р»СЏРµРј РІСЃРµ СЂС‘Р±СЂР°, СЃРІСЏР·Р°РЅРЅС‹Рµ СЃ СѓР·Р»РѕРј
             edges.RemoveAll(edge => edge.From == selectedNode || edge.To == selectedNode);
 
-            // Удаляем сам узел
+            // РЈРґР°Р»СЏРµРј СЃР°Рј СѓР·РµР»
             nodes.Remove(selectedNode);
             selectedNode = null;
 
-            UpdateMatrix();           // обновляем матрицу
-            UpdateSourceNodeComboBox(); // если используешь ComboBox для симуляции
-            canvasPanel.Invalidate(); // перерисовываем холст
+            UpdateMatrix();           // РѕР±РЅРѕРІР»СЏРµРј РјР°С‚СЂРёС†Сѓ
+            UpdateSourceNodeComboBox(); // РµСЃР»Рё РёСЃРїРѕР»СЊР·СѓРµС€СЊ ComboBox РґР»СЏ СЃРёРјСѓР»СЏС†РёРё
+            canvasPanel.Invalidate(); // РїРµСЂРµСЂРёСЃРѕРІС‹РІР°РµРј С…РѕР»СЃС‚
         }
 
         private Edge GetEdgeAtPoint(Point p)
@@ -719,14 +779,14 @@ namespace AIGraph
                 float closestY = from.Y + t * dy;
 
                 float dist = (float)Math.Sqrt((p.X - closestX) * (p.X - closestX) + (p.Y - closestY) * (p.Y - closestY));
-                if (dist <= 5) return edge; // порог 5 пикселей
+                if (dist <= 5) return edge; // РїРѕСЂРѕРі 5 РїРёРєСЃРµР»РµР№
             }
             return null;
         }
 
         private void Form1_KeyDown(object sender, KeyEventArgs e)
         {
-            // Ctrl + S — сохранить
+            // Ctrl + S вЂ” СЃРѕС…СЂР°РЅРёС‚СЊ
             if (e.Control && e.KeyCode == Keys.S)
             {
                 SaveFileDialog sfd = new SaveFileDialog
@@ -737,11 +797,11 @@ namespace AIGraph
                 if (sfd.ShowDialog() == DialogResult.OK)
                 {
                     SaveLoad.SaveGraph(sfd.FileName, nodes, edges);
-                    MessageBox.Show("Граф сохранён!", "Сохранение", MessageBoxButtons.OK, MessageBoxIcon.Information);
+                    MessageBox.Show("Р“СЂР°С„ СЃРѕС…СЂР°РЅС‘РЅ!", "РЎРѕС…СЂР°РЅРµРЅРёРµ", MessageBoxButtons.OK, MessageBoxIcon.Information);
                 }
             }
 
-            // Ctrl + O — открыть
+            // Ctrl + O вЂ” РѕС‚РєСЂС‹С‚СЊ
             if (e.Control && e.KeyCode == Keys.O)
             {
                 OpenFileDialog ofd = new OpenFileDialog
@@ -755,7 +815,7 @@ namespace AIGraph
                     UpdateMatrix();
                     UpdateSourceNodeComboBox();
                     canvasPanel.Invalidate();
-                    MessageBox.Show("Граф загружен!", "Загрузка", MessageBoxButtons.OK, MessageBoxIcon.Information);
+                    MessageBox.Show("Р“СЂР°С„ Р·Р°РіСЂСѓР¶РµРЅ!", "Р—Р°РіСЂСѓР·РєР°", MessageBoxButtons.OK, MessageBoxIcon.Information);
                 }
             }
             if (e.KeyCode == Keys.Delete)
@@ -765,28 +825,28 @@ namespace AIGraph
         }
         private void DeleteSelectedObjects()
         {
-            // Удаляем все рёбра, которые выделены
+            // РЈРґР°Р»СЏРµРј РІСЃРµ СЂС‘Р±СЂР°, РєРѕС‚РѕСЂС‹Рµ РІС‹РґРµР»РµРЅС‹
             edges.RemoveAll(edge => edge.IsSelected);
 
-            // Удаляем все узлы, которые выделены
+            // РЈРґР°Р»СЏРµРј РІСЃРµ СѓР·Р»С‹, РєРѕС‚РѕСЂС‹Рµ РІС‹РґРµР»РµРЅС‹
             nodes.RemoveAll(node =>
             {
                 if (node.Click)
                 {
-                    // Удаляем все рёбра, связанные с этим узлом
+                    // РЈРґР°Р»СЏРµРј РІСЃРµ СЂС‘Р±СЂР°, СЃРІСЏР·Р°РЅРЅС‹Рµ СЃ СЌС‚РёРј СѓР·Р»РѕРј
                     edges.RemoveAll(edge => edge.From == node || edge.To == node);
                     return true;
                 }
                 return false;
             });
 
-            // Сброс выделения
+            // РЎР±СЂРѕСЃ РІС‹РґРµР»РµРЅРёСЏ
             foreach (var node in nodes)
                 node.Click = false;
             foreach (var edge in edges)
                 edge.IsSelected = false;
 
-            UpdateMatrix();
+            UpdateMatrix(); 
             UpdateSourceNodeComboBox();
             canvasPanel.Invalidate();
         }
