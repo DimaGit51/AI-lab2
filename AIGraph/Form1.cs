@@ -40,6 +40,35 @@ namespace AIGraph
         {
             InitializeComponent();
 
+            // ====== Перенес кусок кода сюда ====== до UpdateMatrix(); <<<
+            // === DataGridView для матрицы ===
+            matrixGrid = new DataGridView
+            {
+                Dock = DockStyle.Fill,
+                AllowUserToAddRows = false,
+                AutoSizeColumnsMode = DataGridViewAutoSizeColumnsMode.Fill
+            };
+            tabPage2.Controls.Add(matrixGrid);
+
+            matrixGrid.CellValueChanged += MatrixGrid_CellValueChanged;
+            matrixGrid.CellEndEdit += (s, e) => matrixGrid.CommitEdit(DataGridViewDataErrorContexts.Commit);
+
+            // === Chart для визуализации активности узлов ===
+            impulseChart = new System.Windows.Forms.DataVisualization.Charting.Chart
+            {
+                Location = new Point(10, 50),
+                Size = new Size(600, 250)
+            };
+            tabPage1.Controls.Add(impulseChart);
+
+            var chartArea = new System.Windows.Forms.DataVisualization.Charting.ChartArea();
+            impulseChart.ChartAreas.Add(chartArea);
+            impulseChart.Legends.Add(new System.Windows.Forms.DataVisualization.Charting.Legend());
+
+            // === Обновляем матрицу при запуске ===
+            UpdateMatrix();
+            // ====== Перенес кусок кода сюда ====== >>>
+
             // Настройка MaterialSkin
             var materialSkinManager = MaterialSkinManager.Instance;
             materialSkinManager.AddFormToManage(this);

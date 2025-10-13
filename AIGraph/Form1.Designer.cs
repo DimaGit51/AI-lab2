@@ -30,8 +30,14 @@
         {
             tabControl1 = new TabControl();
             tabPage1 = new TabPage();
+            analyzeButton = new MaterialSkin.Controls.MaterialButton();
+            simulateButton = new MaterialSkin.Controls.MaterialButton();
+            sourceNodeComboBox = new ComboBox();
             tabPage2 = new TabPage();
+            impulseChart = new System.Windows.Forms.DataVisualization.Charting.Chart();
             tabControl1.SuspendLayout();
+            tabPage1.SuspendLayout();
+            ((System.ComponentModel.ISupportInitialize)impulseChart).BeginInit();
             SuspendLayout();
             // 
             // tabControl1
@@ -47,6 +53,9 @@
             // 
             // tabPage1
             // 
+            tabPage1.Controls.Add(analyzeButton);
+            tabPage1.Controls.Add(simulateButton);
+            tabPage1.Controls.Add(sourceNodeComboBox);
             tabPage1.Location = new Point(4, 29);
             tabPage1.Name = "tabPage1";
             tabPage1.Padding = new Padding(3);
@@ -55,12 +64,57 @@
             tabPage1.Text = "Graph";
             tabPage1.UseVisualStyleBackColor = true;
             // 
+            // analyzeButton
+            // 
+            analyzeButton.AutoSizeMode = AutoSizeMode.GrowAndShrink;
+            analyzeButton.Density = MaterialSkin.Controls.MaterialButton.MaterialButtonDensity.Default;
+            analyzeButton.Depth = 0;
+            analyzeButton.HighEmphasis = true;
+            analyzeButton.Icon = null;
+            analyzeButton.Location = new Point(325, 6);
+            analyzeButton.Margin = new Padding(4, 6, 4, 6);
+            analyzeButton.MouseState = MaterialSkin.MouseState.HOVER;
+            analyzeButton.Name = "analyzeButton";
+            analyzeButton.NoAccentTextColor = Color.Empty;
+            analyzeButton.Size = new Size(172, 36);
+            analyzeButton.TabIndex = 1;
+            analyzeButton.Text = "Анализ структуры";
+            analyzeButton.Type = MaterialSkin.Controls.MaterialButton.MaterialButtonType.Contained;
+            analyzeButton.UseAccentColor = false;
+            analyzeButton.Click += analyzeButton_Click;
+            // 
+            // simulateButton
+            // 
+            simulateButton.AutoSizeMode = AutoSizeMode.GrowAndShrink;
+            simulateButton.Density = MaterialSkin.Controls.MaterialButton.MaterialButtonDensity.Default;
+            simulateButton.Depth = 0;
+            simulateButton.HighEmphasis = true;
+            simulateButton.Icon = null;
+            simulateButton.Location = new Point(134, 6);
+            simulateButton.Margin = new Padding(4, 6, 4, 6);
+            simulateButton.MouseState = MaterialSkin.MouseState.HOVER;
+            simulateButton.Name = "simulateButton";
+            simulateButton.NoAccentTextColor = Color.Empty;
+            simulateButton.Size = new Size(183, 36);
+            simulateButton.TabIndex = 2;
+            simulateButton.Text = "Запустить импульс";
+            simulateButton.Type = MaterialSkin.Controls.MaterialButton.MaterialButtonType.Contained;
+            simulateButton.UseAccentColor = false;
+            simulateButton.Click += SimulateButton_Click;
+            // 
+            // sourceNodeComboBox
+            // 
+            sourceNodeComboBox.Location = new Point(6, 6);
+            sourceNodeComboBox.Name = "sourceNodeComboBox";
+            sourceNodeComboBox.Size = new Size(121, 28);
+            sourceNodeComboBox.TabIndex = 3;
+            // 
             // tabPage2
             // 
             tabPage2.Location = new Point(4, 29);
             tabPage2.Name = "tabPage2";
             tabPage2.Padding = new Padding(3);
-            tabPage2.Size = new Size(242, 92);
+            tabPage2.Size = new Size(1266, 620);
             tabPage2.TabIndex = 1;
             tabPage2.Text = "Matrix";
             tabPage2.UseVisualStyleBackColor = true;
@@ -72,63 +126,10 @@
             Name = "Form1";
             Text = "AIGraph";
             tabControl1.ResumeLayout(false);
+            tabPage1.ResumeLayout(false);
+            tabPage1.PerformLayout();
+            ((System.ComponentModel.ISupportInitialize)impulseChart).EndInit();
             ResumeLayout(false);
-
-            // Инициализация DataGridView для матрицы
-            matrixGrid = new DataGridView
-            {
-                Dock = DockStyle.Fill,
-                AllowUserToAddRows = false,
-                AutoSizeColumnsMode = DataGridViewAutoSizeColumnsMode.Fill
-            };
-            tabPage2.Controls.Add(matrixGrid);
-
-            // Обработка изменения значения в матрице
-            matrixGrid.CellValueChanged += MatrixGrid_CellValueChanged;
-            matrixGrid.CellEndEdit += (s, e) => matrixGrid.CommitEdit(DataGridViewDataErrorContexts.Commit);
-            UpdateMatrix();
-
-            // Кнопка "Анализ структуры"
-            analyzeButton = new MaterialSkin.Controls.MaterialButton
-            {
-                Text = "Анализ структуры",
-                Location = new Point(10, 10),
-                AutoSize = true
-            };
-            analyzeButton.Click += analyzeButton_Click;
-            this.Controls.Add(analyzeButton);
-
-            // ComboBox для выбора стартовой вершины
-            sourceNodeComboBox = new ComboBox
-            {
-                Location = new Point(10, 10),
-                Width = 150,
-                DropDownStyle = ComboBoxStyle.DropDownList
-            };
-            tabPage1.Controls.Add(sourceNodeComboBox);
-
-            // Кнопка запуска симуляции
-            simulateButton = new MaterialSkin.Controls.MaterialButton
-            {
-                Text = "Запустить импульс",
-                Location = new Point(170, 10),
-                AutoSize = true
-            };
-            simulateButton.Click += SimulateButton_Click;
-            tabPage1.Controls.Add(simulateButton);
-
-            // Chart для визуализации активности узлов
-            impulseChart = new System.Windows.Forms.DataVisualization.Charting.Chart
-            {
-                Location = new Point(10, 50),
-                Size = new Size(600, 250)
-            };
-            tabPage1.Controls.Add(impulseChart);
-
-            // Настройка Chart
-            var chartArea = new System.Windows.Forms.DataVisualization.Charting.ChartArea();
-            impulseChart.ChartAreas.Add(chartArea);
-            impulseChart.Legends.Add(new System.Windows.Forms.DataVisualization.Charting.Legend());
         }
 
         private void analyzeButton_Click(object sender, EventArgs e)
