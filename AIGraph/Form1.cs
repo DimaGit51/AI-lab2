@@ -144,7 +144,7 @@ namespace AIGraph
                         GraphHelper.ResetSelection(nodes);
                         selectedNode = null;
                         panel.Invalidate();
-
+                        UpdateMatrix();
                         // Восстанавливаем фокус на холст
                         panel.Focus();
                     }
@@ -384,35 +384,51 @@ namespace AIGraph
 
         private void UpdateMatrix()
         {
-            int N = nodes.Count;
-            for (int i = 0; i < N; i++)
-            {
-                matrixGrid.Columns.Add(i.ToString(), nodes[i].Name);
-            }
+            if (matrixGrid == null) return;
 
+            // временно отключаем событие, чтобы не было рекурсии
+            matrixGrid.CellValueChanged -= MatrixGrid_CellValueChanged;
+
+            matrixGrid.Columns.Clear();
+            matrixGrid.Rows.Clear();
+
+            int N = nodes.Count;
+
+            // создаём колонки
+            for (int i = 0; i < N; i++)
+                matrixGrid.Columns.Add(i.ToString(), nodes[i].Name);
+
+            // создаём строки и заголовки
             for (int i = 0; i < N; i++)
             {
                 matrixGrid.Rows.Add();
                 matrixGrid.Rows[i].HeaderCell.Value = nodes[i].Name;
             }
 
-            // Заполняем веса
+            // заполняем веса
             for (int i = 0; i < N; i++)
             {
                 for (int j = 0; j < N; j++)
                 {
-                    var ni = nodes[i];
-                    var nj = nodes[j];
                     double weight = 0;
                     foreach (var e in edges)
                     {
-                        if ((e.From == ni && e.To == nj) || (e.From == nj && e.To == ni))
-                            weight += e.Weight;
+                        if (e.From == nodes[i] && e.To == nodes[j])
+                        {
+                            weight = e.Weight;
+                            break;
+                        }
                     }
+
                     matrixGrid.Rows[i].Cells[j].Value = weight == 0 ? "" : weight.ToString("0.##");
                 }
             }
+
+            // возвращаем обработчик обратно
+            matrixGrid.CellValueChanged += MatrixGrid_CellValueChanged;
         }
+
+
 
         private void MatrixGrid_CellValueChanged(object sender, DataGridViewCellEventArgs e)
         {
