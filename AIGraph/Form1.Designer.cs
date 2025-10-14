@@ -30,6 +30,7 @@
         {
             tabControl1 = new TabControl();
             tabPage1 = new TabPage();
+            nodeRadiusUpDown = new NumericUpDown();
             toggleChartButton = new MaterialSkin.Controls.MaterialButton();
             analyzeButton = new MaterialSkin.Controls.MaterialButton();
             simulateButton = new MaterialSkin.Controls.MaterialButton();
@@ -38,6 +39,7 @@
             impulseChart = new System.Windows.Forms.DataVisualization.Charting.Chart();
             tabControl1.SuspendLayout();
             tabPage1.SuspendLayout();
+            ((System.ComponentModel.ISupportInitialize)nodeRadiusUpDown).BeginInit();
             ((System.ComponentModel.ISupportInitialize)impulseChart).BeginInit();
             SuspendLayout();
             // 
@@ -54,6 +56,7 @@
             // 
             // tabPage1
             // 
+            tabPage1.Controls.Add(nodeRadiusUpDown);
             tabPage1.Controls.Add(toggleChartButton);
             tabPage1.Controls.Add(analyzeButton);
             tabPage1.Controls.Add(simulateButton);
@@ -65,6 +68,15 @@
             tabPage1.TabIndex = 0;
             tabPage1.Text = "Graph";
             tabPage1.UseVisualStyleBackColor = true;
+            // 
+            // nodeRadiusUpDown
+            // 
+            nodeRadiusUpDown.Location = new Point(1110, 15);
+            nodeRadiusUpDown.Name = "nodeRadiusUpDown";
+            nodeRadiusUpDown.Size = new Size(150, 27);
+            nodeRadiusUpDown.TabIndex = 5;
+            nodeRadiusUpDown.ValueChanged += nodeRadiusUpDown_ValueChanged;
+
             // 
             // toggleChartButton
             // 
@@ -155,8 +167,10 @@
             tabControl1.ResumeLayout(false);
             tabPage1.ResumeLayout(false);
             tabPage1.PerformLayout();
+            ((System.ComponentModel.ISupportInitialize)nodeRadiusUpDown).EndInit();
             ((System.ComponentModel.ISupportInitialize)impulseChart).EndInit();
             ResumeLayout(false);
+
         }
 
         private void analyzeButton_Click(object sender, EventArgs e)
@@ -184,5 +198,6 @@
         private DataGridView matrixGrid;
         private MaterialSkin.Controls.MaterialButton analyzeButton;
         private MaterialSkin.Controls.MaterialButton toggleChartButton;
+        private NumericUpDown nodeRadiusUpDown;
     }
 }

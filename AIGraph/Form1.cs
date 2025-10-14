@@ -116,6 +116,25 @@ namespace AIGraph
             Point clickedPoint = GetCanvasPoint(e.Location);
             Node clicked = GraphHelper.GetNodeAt(nodes, clickedPoint, nodeRadius);
 
+            if (clicked != null)
+            {
+                // Выделяем узел
+                clicked.Click = true;
+
+                // Обновляем NumericUpDown
+                UpdateNodeRadiusUpDown();
+
+                canvasPanel.Invalidate();
+            }
+            else
+            {
+                // Снимаем выделение с всех узлов
+                foreach (var node in nodes)
+                    node.Click = false;
+
+                UpdateNodeRadiusUpDown(); // скроет NumericUpDown
+                canvasPanel.Invalidate();
+            }
 
 
             // Начало панорамирования (средняя кнопка)
@@ -310,11 +329,12 @@ namespace AIGraph
                 float dist = (float)Math.Sqrt(dx * dx + dy * dy);
                 if (dist < 0.001f) continue;
 
-                float offsetX = nodeRadius * dx / dist;
-                float offsetY = nodeRadius * dy / dist;
+                float offsetX = edge.From.Radius * dx / dist;
+                float offsetY = edge.From.Radius * dy / dist;
 
-                PointF start = new PointF(from.X + offsetX, from.Y + offsetY);
-                PointF end = new PointF(to.X - offsetX, to.Y - offsetY);
+                PointF start = new PointF(from.X + edge.From.Radius * dx / dist, from.Y + edge.From.Radius * dy / dist);
+                PointF end = new PointF(to.X - edge.To.Radius * dx / dist, to.Y - edge.To.Radius * dy / dist);
+
 
                 using (Pen pen = new Pen(Color.Black, 2))
                 {
@@ -348,18 +368,20 @@ namespace AIGraph
 
             foreach (var node in nodes)
             {
-                float x = node.Position.X - nodeRadius;
-                float y = node.Position.Y - nodeRadius;
+
+                float x = node.Position.X - node.Radius;
+                float y = node.Position.Y - node.Radius;
+
 
                 Brush fill = node.IsSelected ? Brushes.LightGray : Brushes.White;
-                g.FillEllipse(fill, x, y, nodeRadius * 2, nodeRadius * 2);
-                g.DrawEllipse(Pens.Black, x, y, nodeRadius * 2, nodeRadius * 2);
+                g.FillEllipse(fill, x, y, node.Radius * 2, node.Radius * 2);
+                g.DrawEllipse(Pens.Black, x, y, node.Radius * 2, node.Radius * 2);
 
                 // === Надпись над узлом: w = [вес узла] ===
                 string weightLabel = $"w = {node.Weight:0.##}";
                 SizeF weightSize = g.MeasureString(weightLabel, SystemFonts.DefaultFont);
                 float weightX = node.Position.X - weightSize.Width / 2;
-                float weightY = node.Position.Y - nodeRadius - weightSize.Height - 5; // чуть выше круга
+                float weightY = node.Position.Y - node.Radius - weightSize.Height - 5; // чуть выше круга
                 g.DrawString(weightLabel, SystemFonts.DefaultFont, Brushes.DarkSlateGray, weightX, weightY);
 
                 // === Имя узла (в центре) ===
@@ -376,9 +398,9 @@ namespace AIGraph
                 if (node.Click)
                 {
                     float margin = 6;
-                    float rectX = node.Position.X - nodeRadius - margin;
-                    float rectY = node.Position.Y - nodeRadius - margin;
-                    float rectSize = (nodeRadius + margin) * 2;
+                    float rectX = node.Position.X - node.Radius - margin;
+                    float rectY = node.Position.Y - node.Radius - margin;
+                    float rectSize = (node.Radius + margin) * 2;
 
                     using (Pen dashedPen = new Pen(Color.Black, 1))
                     {
@@ -693,15 +715,31 @@ namespace AIGraph
                 $"Компоненты связности: {components}\n" +
                 $"Цикломатическое число: {cyclomaticNumber}\n" +
                 $"Артикуляционные вершины: {(articulationPoints.Count == 0 ? "нет" : string.Join(", ", articulationPoints.ConvertAll(n => n.Name)))}\n" +
-                $"Структурная устойчивость (по топологии): {(isTopologicallyStable ? "устойчива" : "неустойчива")}\n\n";
+                $"Структурная устойчивость (по топологии): {(isTopologicallyStable ? "устойчива" : "неустойчива")}\n";
+
+            // === Вывод циклов ===
+            var cycles = FindCycles();
+            string cyclesInfo = "Найденные циклы:\n";
+            if (cycles.Count == 0)
+                cyclesInfo += "Циклов нет\n";
+            else
+            {
+                int idx = 1;
+                foreach (var cycle in cycles)
+                {
+                    cyclesInfo += $"{idx}: {string.Join(" -> ", cycle.ConvertAll(n => n.Name))} -> {cycle[0].Name}\n";
+                    idx++;
+                }
+            }
 
             // === СПЕКТРАЛЬНЫЙ АНАЛИЗ ===
             string spectralInfo = AnalyzeSpectralStability();
 
             // === ИТОГ ===
-            string finalResult = topologicalInfo + spectralInfo;
+            string finalResult = topologicalInfo + cyclesInfo + "\n" + spectralInfo;
             MessageBox.Show(finalResult, "Анализ устойчивости", MessageBoxButtons.OK, MessageBoxIcon.Information);
         }
+
 
         private void SimulateImpulse(Node source)
         {
@@ -869,5 +907,86 @@ namespace AIGraph
             UpdateSourceNodeComboBox();
             canvasPanel.Invalidate();
         }
+        // Метод для поиска всех циклов в графе
+        private List<List<Node>> FindCycles()
+        {
+            List<List<Node>> cycles = new List<List<Node>>();
+            HashSet<Node> visited = new HashSet<Node>();
+            Stack<Node> stack = new Stack<Node>();
+
+            foreach (var node in nodes)
+                DFSFindCycles(node, node, visited, stack, cycles);
+
+            // Убираем дубликаты (по набору узлов)
+            List<List<Node>> uniqueCycles = new List<List<Node>>();
+            foreach (var c in cycles)
+            {
+                bool isDuplicate = uniqueCycles.Exists(uc =>
+                    new HashSet<Node>(uc).SetEquals(c));
+                if (!isDuplicate) uniqueCycles.Add(c);
+            }
+
+            return uniqueCycles;
+        }
+
+        private void DFSFindCycles(Node start, Node current, HashSet<Node> visited, Stack<Node> path, List<List<Node>> cycles)
+        {
+            path.Push(current);
+            visited.Add(current);
+
+            foreach (var edge in edges)
+            {
+                Node neighbor = null;
+                if (edge.From == current) neighbor = edge.To;
+
+                if (neighbor == null) continue;
+
+                if (neighbor == start && path.Count > 1)
+                {
+                    // нашли цикл
+                    cycles.Add(new List<Node>(path));
+                }
+                else if (!visited.Contains(neighbor))
+                {
+                    DFSFindCycles(start, neighbor, visited, path, cycles);
+                }
+            }
+
+            path.Pop();
+            visited.Remove(current);
+        }
+        private void UpdateNodeRadiusUpDown()
+        {
+            var selectedNodes = nodes.FindAll(n => n.Click);
+            if (selectedNodes.Count == 0)
+            {
+                nodeRadiusUpDown.Visible = false;
+                return;
+            }
+
+            nodeRadiusUpDown.Visible = true;
+
+            // Не обновляем значение, если оно уже изменялось пользователем
+            if (!nodeRadiusUpDown.Focused)
+            {
+                nodeRadiusUpDown.Value = (decimal)selectedNodes[0].Radius;
+            }
+        }
+
+        private void nodeRadiusUpDown_ValueChanged(object sender, EventArgs e)
+        {
+            var selectedNodes = nodes.FindAll(n => n.Click);
+
+            if (selectedNodes.Count == 0) return;
+
+            int newRadius = (int)nodeRadiusUpDown.Value; // явное преобразование decimal -> int
+
+            foreach (var node in selectedNodes)
+                node.Radius = newRadius;
+
+            canvasPanel.Invalidate();
+        }
+
+
     }
 }

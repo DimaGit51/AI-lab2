@@ -13,6 +13,7 @@ namespace AIGraph.Models
         private bool isSelected;
         private bool click;
         private double weight;
+        private int radius = 40; // стандартный размер
 
         public string Name
         {
@@ -42,14 +43,20 @@ namespace AIGraph.Models
             get { return weight; }
             set { weight = value; }
         }
+        public int Radius
+        {
+            get { return radius; }
+            set { radius = Math.Max(5, value); } // минимальный размер 5
+        }
 
-        public Node(string name, Point position, double weight = 0)
+        public Node(string name, Point position, double weight = 0, int radius = 40)
         {
             this.name = name;
             this.position = position;
             this.isSelected = false;
             this.click = false;
             this.weight = weight;
+            this.radius = radius;
         }
     }
 }

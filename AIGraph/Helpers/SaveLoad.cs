@@ -20,6 +20,8 @@ namespace AIGraph.Helpers
         public string Name { get; set; }
         public int X { get; set; }
         public int Y { get; set; }
+        public double Weight { get; set; }
+        public int Radius { get; set; }
     }
 
     [Serializable]
@@ -41,7 +43,14 @@ namespace AIGraph.Helpers
             };
 
             foreach (var n in nodes)
-                data.Nodes.Add(new NodeData { Name = n.Name, X = n.Position.X, Y = n.Position.Y });
+                data.Nodes.Add(new NodeData
+                {
+                    Name = n.Name,
+                    X = n.Position.X,
+                    Y = n.Position.Y,
+                    Weight = n.Weight,
+                    Radius = n.Radius
+                });
 
             foreach (var e in edges)
                 data.Edges.Add(new EdgeData { From = e.From.Name, To = e.To.Name, Weight = e.Weight });
@@ -55,6 +64,8 @@ namespace AIGraph.Helpers
                     writer.Write(n.Name);
                     writer.Write(n.X);
                     writer.Write(n.Y);
+                    writer.Write(n.Weight);
+                    writer.Write(n.Radius);
                 }
 
                 writer.Write(data.Edges.Count);
@@ -81,7 +92,9 @@ namespace AIGraph.Helpers
                     string name = reader.ReadString();
                     int x = reader.ReadInt32();
                     int y = reader.ReadInt32();
-                    nodes.Add(new Node(name, new Point(x, y)));
+                    double weight = reader.ReadDouble();
+                    int radius = reader.ReadInt32();
+                    nodes.Add(new Node(name, new Point(x, y), weight, radius));
                 }
 
                 int edgeCount = reader.ReadInt32();
