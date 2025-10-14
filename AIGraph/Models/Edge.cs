@@ -30,12 +30,25 @@ namespace AIGraph.Models
             get { return weight; }
             set
             {
-                // Ограничиваем вес значениями от -1 до 1
-                if (value < -1) weight = -1;
-                else if (value > 1) weight = 1;
-                else weight = value;
+                if (value < -1)
+                {
+                    weight = -1;
+                    MessageBox.Show("Вес не может быть меньше -1. Установлено значение -1.",
+                                    "Предупреждение", MessageBoxButtons.OK, MessageBoxIcon.Warning);
+                }
+                else if (value > 1)
+                {
+                    weight = 1;
+                    MessageBox.Show("Вес не может быть больше 1. Установлено значение 1.",
+                                    "Предупреждение", MessageBoxButtons.OK, MessageBoxIcon.Warning);
+                }
+                else
+                {
+                    weight = value;
+                }
             }
         }
+
 
         public bool IsSelected
         {
