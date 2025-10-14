@@ -12,6 +12,7 @@ namespace AIGraph.Models
         private Point position;
         private bool isSelected;
         private bool click;
+        private double weight;
 
         public string Name
         {
@@ -36,13 +37,19 @@ namespace AIGraph.Models
             get { return click; }
             set { click = value; }
         }
+        public double Weight
+        {
+            get { return weight; }
+            set { weight = value; }
+        }
 
-        public Node(string name, Point position)
+        public Node(string name, Point position, double weight = 0)
         {
             this.name = name;
             this.position = position;
             this.isSelected = false;
             this.click = false;
+            this.weight = weight;
         }
     }
 }

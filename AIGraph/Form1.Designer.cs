@@ -30,6 +30,7 @@
         {
             tabControl1 = new TabControl();
             tabPage1 = new TabPage();
+            toggleChartButton = new MaterialSkin.Controls.MaterialButton();
             analyzeButton = new MaterialSkin.Controls.MaterialButton();
             simulateButton = new MaterialSkin.Controls.MaterialButton();
             sourceNodeComboBox = new ComboBox();
@@ -53,6 +54,7 @@
             // 
             // tabPage1
             // 
+            tabPage1.Controls.Add(toggleChartButton);
             tabPage1.Controls.Add(analyzeButton);
             tabPage1.Controls.Add(simulateButton);
             tabPage1.Controls.Add(sourceNodeComboBox);
@@ -63,6 +65,24 @@
             tabPage1.TabIndex = 0;
             tabPage1.Text = "Graph";
             tabPage1.UseVisualStyleBackColor = true;
+            // 
+            // toggleChartButton
+            // 
+            toggleChartButton.AutoSizeMode = AutoSizeMode.GrowAndShrink;
+            toggleChartButton.Density = MaterialSkin.Controls.MaterialButton.MaterialButtonDensity.Default;
+            toggleChartButton.Depth = 0;
+            toggleChartButton.HighEmphasis = true;
+            toggleChartButton.Icon = null;
+            toggleChartButton.Location = new Point(505, 6);
+            toggleChartButton.Margin = new Padding(4, 6, 4, 6);
+            toggleChartButton.MouseState = MaterialSkin.MouseState.HOVER;
+            toggleChartButton.Name = "toggleChartButton";
+            toggleChartButton.NoAccentTextColor = Color.Empty;
+            toggleChartButton.Size = new Size(64, 36);
+            toggleChartButton.TabIndex = 4;
+            toggleChartButton.Text = "-";
+            toggleChartButton.Type = MaterialSkin.Controls.MaterialButton.MaterialButtonType.Contained;
+            toggleChartButton.UseAccentColor = false;
             // 
             // analyzeButton
             // 
@@ -119,6 +139,13 @@
             tabPage2.Text = "Matrix";
             tabPage2.UseVisualStyleBackColor = true;
             // 
+            // impulseChart
+            // 
+            impulseChart.Location = new Point(0, 0);
+            impulseChart.Name = "impulseChart";
+            impulseChart.Size = new Size(300, 300);
+            impulseChart.TabIndex = 0;
+            // 
             // Form1
             // 
             ClientSize = new Size(1280, 720);
@@ -156,5 +183,6 @@
         private TabPage tabPage2;
         private DataGridView matrixGrid;
         private MaterialSkin.Controls.MaterialButton analyzeButton;
+        private MaterialSkin.Controls.MaterialButton toggleChartButton;
     }
 }

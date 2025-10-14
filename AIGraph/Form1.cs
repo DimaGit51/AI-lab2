@@ -18,7 +18,7 @@ namespace AIGraph
         private List<Node> nodes = new List<Node>();
         private List<Edge> edges = new List<Edge>();
         private Node selectedNode = null;
-        private int nodeRadius = 20;
+        private int nodeRadius = 40;
         private bool isDragging = false;
         private Node draggingNode = null;
         private Point dragOffset;
@@ -37,6 +37,9 @@ namespace AIGraph
         private ComboBox sourceNodeComboBox;
         private MaterialSkin.Controls.MaterialButton simulateButton;
         private System.Windows.Forms.DataVisualization.Charting.Chart impulseChart;
+
+        private bool chartVisible = true;
+
 
         public Form1()
         {
@@ -97,6 +100,14 @@ namespace AIGraph
 
             this.KeyPreview = true; // форма будет получать события клавиш
             this.KeyDown += Form1_KeyDown;
+
+            toggleChartButton.Click += (s, e) =>
+            {
+                chartVisible = !chartVisible;
+                impulseChart.Visible = chartVisible;
+                toggleChartButton.Text = chartVisible ? "–" : "+";
+            };
+
         }
 
         private void CanvasPanel_MouseDown(object sender, MouseEventArgs e)
@@ -208,7 +219,8 @@ namespace AIGraph
                         if (inputForm.ShowDialog(this) == DialogResult.OK && !string.IsNullOrWhiteSpace(inputForm.NodeName))
                         {
                             string nodeName = inputForm.NodeName;
-                            nodes.Add(new Node(nodeName, canvasPoint));
+                            double nodeWeight = inputForm.NodeWeight;
+                            nodes.Add(new Node(nodeName, canvasPoint, nodeWeight));
                             UpdateMatrix();
                             UpdateSourceNodeComboBox();
                             canvasPanel.Invalidate();
@@ -248,7 +260,8 @@ namespace AIGraph
                             if (inputForm.ShowDialog(this) == DialogResult.OK && !string.IsNullOrWhiteSpace(inputForm.NodeName))
                             {
                                 string nodeName = inputForm.NodeName;
-                                nodes.Add(new Node(nodeName, canvasPoint));
+                                double nodeWeight = inputForm.NodeWeight;
+                                nodes.Add(new Node(nodeName, canvasPoint, nodeWeight));
                                 UpdateMatrix();
                                 UpdateSourceNodeComboBox();
                                 canvasPanel.Invalidate();
@@ -307,27 +320,24 @@ namespace AIGraph
                 {
                     pen.CustomEndCap = new System.Drawing.Drawing2D.AdjustableArrowCap(6, 8);
 
-                    // Настраиваем штриховку
+                    // Настраиваем стиль линии
                     if (edge.Weight < 0 && edge.IsSelected)
                     {
-                        // Отрицательная + выделенная
                         pen.DashPattern = new float[] { 4, 2 };
                     }
                     else if (edge.Weight < 0)
                     {
-                        // Только отрицательная
                         pen.DashPattern = new float[] { 8, 6 };
                     }
                     else if (edge.IsSelected)
                     {
-                        // Только выделенная
                         pen.DashStyle = System.Drawing.Drawing2D.DashStyle.Dash;
                     }
 
                     g.DrawLine(pen, start, end);
                 }
 
-                // Вес над линией
+                // Вес ребра
                 float midX = (start.X + end.X) / 2;
                 float midY = (start.Y + end.Y) / 2;
                 string weightText = edge.Weight.ToString("0.00");
@@ -336,7 +346,6 @@ namespace AIGraph
                     midX - textSize.Width / 2, midY - textSize.Height / 2 - 10);
             }
 
-            // Рисуем узлы
             foreach (var node in nodes)
             {
                 float x = node.Position.X - nodeRadius;
@@ -346,13 +355,22 @@ namespace AIGraph
                 g.FillEllipse(fill, x, y, nodeRadius * 2, nodeRadius * 2);
                 g.DrawEllipse(Pens.Black, x, y, nodeRadius * 2, nodeRadius * 2);
 
+                // === Надпись над узлом: w = [вес узла] ===
+                string weightLabel = $"w = {node.Weight:0.##}";
+                SizeF weightSize = g.MeasureString(weightLabel, SystemFonts.DefaultFont);
+                float weightX = node.Position.X - weightSize.Width / 2;
+                float weightY = node.Position.Y - nodeRadius - weightSize.Height - 5; // чуть выше круга
+                g.DrawString(weightLabel, SystemFonts.DefaultFont, Brushes.DarkSlateGray, weightX, weightY);
+
+                // === Имя узла (в центре) ===
                 SizeF nameSize = g.MeasureString(node.Name, SystemFonts.DefaultFont);
-                g.DrawString(node.Name, SystemFonts.DefaultFont, Brushes.Black,
-                    node.Position.X - nameSize.Width / 2,
-                    node.Position.Y - nameSize.Height / 2);
+                float nameX = node.Position.X - nameSize.Width / 2;
+                float nameY = node.Position.Y - nameSize.Height / 2;
+                g.DrawString(node.Name, SystemFonts.DefaultFont, Brushes.Black, nameX, nameY);
             }
 
-            // Рамка вокруг выбранных узлов
+
+            // Рамка вокруг выбранных
             foreach (var node in nodes)
             {
                 if (node.Click)
@@ -370,6 +388,7 @@ namespace AIGraph
                 }
             }
         }
+
 
 
 
@@ -846,10 +865,9 @@ namespace AIGraph
             foreach (var edge in edges)
                 edge.IsSelected = false;
 
-            UpdateMatrix(); 
+            UpdateMatrix();
             UpdateSourceNodeComboBox();
             canvasPanel.Invalidate();
         }
-
     }
 }

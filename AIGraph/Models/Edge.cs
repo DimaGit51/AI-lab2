@@ -13,7 +13,6 @@ namespace AIGraph.Models
         private double weight;
         private bool isSelected;
 
-
         public Node From
         {
             get { return from; }
@@ -29,7 +28,13 @@ namespace AIGraph.Models
         public double Weight
         {
             get { return weight; }
-            set { weight = value; }
+            set
+            {
+                // Ограничиваем вес значениями от -1 до 1
+                if (value < -1) weight = -1;
+                else if (value > 1) weight = 1;
+                else weight = value;
+            }
         }
 
         public bool IsSelected
@@ -42,7 +47,7 @@ namespace AIGraph.Models
         {
             this.from = from;
             this.to = to;
-            this.weight = weight;
+            this.Weight = weight; // используем сеттер с ограничением
             this.isSelected = false;
         }
     }
