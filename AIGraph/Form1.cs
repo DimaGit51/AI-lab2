@@ -248,6 +248,68 @@ namespace AIGraph
                 };
                 menu.Items.Add(createNodeItem);
                 menu.Show(panel, e.Location);
+
+                foreach (var node in nodes)
+                {
+                    float dx = e.X - node.Position.X;
+                    float dy = e.Y - node.Position.Y;
+                    float dist = (float)Math.Sqrt(dx * dx + dy * dy);
+
+                    if (dist <= node.Radius)
+                    {
+                        // Выделяем только этот узел
+                        foreach (var n in nodes) n.IsSelected = false;
+                        node.IsSelected = true;
+
+                        // Открываем форму редактирования
+                        using (var form = new NodeEditForm(node))
+                        {
+                            if (form.ShowDialog() == DialogResult.OK)
+                            {
+                                // Проверяем, чтобы новое имя не совпадало с существующим
+                                bool nameExists = nodes.Exists(n =>
+                                    n != node &&
+                                    n.Name.Equals(form.NodeName, StringComparison.OrdinalIgnoreCase));
+
+                                if (nameExists)
+                                {
+                                    MessageBox.Show($"Узел с именем \"{form.NodeName}\" уже существует.",
+                                        "Ошибка", MessageBoxButtons.OK, MessageBoxIcon.Warning);
+                                    return;
+                                }
+
+                                // Применяем изменения
+                                node.Name = form.NodeName;
+                                node.Weight = form.NodeWeight;
+                                node.Radius = form.NodeRadius;
+
+                                // ✅ Обновляем всё после редактирования
+                                UpdateMatrix();
+                                UpdateSourceNodeComboBox();
+                                canvasPanel.Invalidate();
+                            }
+                        }
+
+                        return; // больше не проверяем
+                    }
+                }
+
+                Edge selectedEdge = edges.Find(ed =>
+                DistanceFromLine(ed.From.Position, ed.To.Position, e.Location) < 6);
+
+                if (selectedEdge != null)
+                {
+                    using (var editForm = new EdgeEditForm(selectedEdge))
+                    {
+                        if (editForm.ShowDialog() == DialogResult.OK)
+                        {
+                            UpdateMatrix();
+                            UpdateSourceNodeComboBox();
+                            canvasPanel.Invalidate();
+                        }
+                    }
+                }
+
                 return;
             }
 
@@ -987,6 +1049,68 @@ namespace AIGraph
             canvasPanel.Invalidate();
         }
 
+        private void Form1_MouseDown(object sender, MouseEventArgs e)
+        {
+            if (e.Button == MouseButtons.Right)
+            {
+                // Найдём узел под курсором
+                foreach (var node in nodes)
+                {
+                    float dx = e.X - node.Position.X;
+                    float dy = e.Y - node.Position.Y;
+                    float dist = (float)Math.Sqrt(dx * dx + dy * dy);
+
+                    if (dist <= node.Radius)
+                    {
+                        // Проверяем, что выделен только этот узел
+                        foreach (var n in nodes) n.IsSelected = false;
+                        node.IsSelected = true;
+
+                        // Открываем форму редактирования
+                        using (var form = new NodeEditForm(node))
+                        {
+                            if (form.ShowDialog() == DialogResult.OK)
+                            {
+                                node.Weight = form.NodeWeight;
+                                node.Radius = form.NodeRadius;
+                                Invalidate(); // перерисовать граф
+                            }
+                        }
+
+                        return; // больше ничего не проверяем
+                    }
+                }
+            }
+        }
+        /// <summary>
+        /// Возвращает минимальное расстояние от точки p до отрезка (a, b)
+        /// </summary>
+        private static double DistanceFromLine(Point a, Point b, Point p)
+        {
+            // Вектор AB и AP
+            float dx = b.X - a.X;
+            float dy = b.Y - a.Y;
+
+            // Если отрезок вырожден (узлы совпадают)
+            if (dx == 0 && dy == 0)
+                return Math.Sqrt((p.X - a.X) * (p.X - a.X) + (p.Y - a.Y) * (p.Y - a.Y));
+
+            // Проекция точки p на линию AB
+            float t = ((p.X - a.X) * dx + (p.Y - a.Y) * dy) / (dx * dx + dy * dy);
+
+            // Ограничиваем t в пределах отрезка [0,1]
+            t = Math.Max(0, Math.Min(1, t));
+
+            // Точка проекции
+            float projX = a.X + t * dx;
+            float projY = a.Y + t * dy;
+
+            // Расстояние от p до проекции
+            float distX = p.X - projX;
+            float distY = p.Y - projY;
+
+            return Math.Sqrt(distX * distX + distY * distY);
+        }
 
     }
 }
