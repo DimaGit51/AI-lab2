@@ -39,6 +39,7 @@ namespace AIGraph
         private System.Windows.Forms.DataVisualization.Charting.Chart impulseChart;
 
         private bool chartVisible = true;
+        private CheckedListBox nodeCheckList; // Список узлов для отображения на графике
 
 
         public Form1()
@@ -763,16 +764,25 @@ namespace AIGraph
                 }
             }
         }
-        /// <summary>
-        /// Подсчитывает отрицательные циклы в графе и разделяет их на чётные и нечётные.
-        /// </summary>
-        private (int evenNegative, int oddNegative) CountNegativeCycles()
+        private int CountNegativeCycles()
         {
-            var cycles = FindCycles();
-            int evenNeg = 0, oddNeg = 0;
+            var cycles = FindCycles(); // все циклы
+            var uniqueCycles = new HashSet<string>(); // для исключения дубликатов
+            int negativeCount = 0;
 
             foreach (var cycle in cycles)
             {
+                // нормализуем цикл: начинаем с узла с минимальным именем
+                var names = cycle.Select(n => n.Name).ToList();
+                int minIndex = names.IndexOf(names.Min());
+                var normalized = names.Skip(minIndex).Concat(names.Take(minIndex)).ToList();
+                string key = string.Join("->", normalized);
+
+                if (uniqueCycles.Contains(key))
+                    continue;
+
+                uniqueCycles.Add(key);
+
                 double product = 1;
                 for (int i = 0; i < cycle.Count; i++)
                 {
@@ -783,17 +793,14 @@ namespace AIGraph
                         product *= edge.Weight;
                 }
 
-                if (product < 0) // отрицательный цикл
-                {
-                    if (cycle.Count % 2 == 0)
-                        evenNeg++;
-                    else
-                        oddNeg++;
-                }
+                if (product < 0)
+                    negativeCount++;
             }
 
-            return (evenNeg, oddNeg);
+            return negativeCount;
         }
+
+
 
         private void AnalyzeGraph()
         {
@@ -804,11 +811,11 @@ namespace AIGraph
             bool isTopologicallyStable = articulationPoints.Count == 0;
 
             string topologicalInfo =
-                "=== ТОПОЛОГИЧЕСКИЙ АНАЛИЗ ===\n" +
-                $"Компоненты связности: {components}\n" +
-                $"Цикломатическое число: {cyclomaticNumber}\n" +
-                $"Артикуляционные вершины: {(articulationPoints.Count == 0 ? "нет" : string.Join(", ", articulationPoints.ConvertAll(n => n.Name)))}\n" +
-                $"Структурная устойчивость (по топологии): {(isTopologicallyStable ? "устойчива" : "неустойчива")}\n";
+                "=== ТОПОЛОГИЧЕСКИЙ АНАЛИЗ ===\n";
+            //$"Компоненты связности: {components}\n" +
+            //$"Цикломатическое число: {cyclomaticNumber}\n" +
+            //$"Артикуляционные вершины: {(articulationPoints.Count == 0 ? "нет" : string.Join(", ", articulationPoints.ConvertAll(n => n.Name)))}\n" +
+            //$"Структурная устойчивость (по топологии): {(isTopologicallyStable ? "устойчива" : "неустойчива")}\n";
 
             // === Поиск циклов ===
             var cycles = FindCycles();
@@ -826,16 +833,23 @@ namespace AIGraph
             }
 
             // === Подсчёт отрицательных циклов ===
-            var (evenNeg, oddNeg) = CountNegativeCycles();
-            string structuralInfo = $"Отрицательные циклы: нечётные = {oddNeg}, чётные = {evenNeg}\n" +
+            var oddNeg = CountNegativeCycles();
+
+            // Логика: нечётное количество отрицательных циклов → устойчиво
+            bool isStructurallyStable = oddNeg % 2 == 1;
+
+            string structuralInfo = $"Отрицательные циклы:{oddNeg}\n" +
                                     $"Структурная устойчивость (по отрицательным циклам нечётной длины): " +
-                                    $"{(oddNeg == 0 ? "устойчива" : "неустойчива")}\n";
+                                    $"{(isStructurallyStable ? "устойчива" : "неустойчива")}\n";
+
 
             // === СПЕКТРАЛЬНЫЙ АНАЛИЗ ===
-            string spectralInfo = AnalyzeSpectralStability();
+            //string spectralInfo = AnalyzeSpectralStability();
 
             // === ИТОГ ===
-            string finalResult = topologicalInfo + cyclesInfo + structuralInfo + "\n" + spectralInfo;
+            //string finalResult = topologicalInfo + cyclesInfo + structuralInfo + "\n" + spectralInfo;
+            string finalResult = topologicalInfo + cyclesInfo + structuralInfo + "\n";
+
             MessageBox.Show(finalResult, "Анализ устойчивости", MessageBoxButtons.OK, MessageBoxIcon.Information);
         }
 
@@ -875,22 +889,33 @@ namespace AIGraph
         private void DrawImpulseChart(List<List<string>> history)
         {
             impulseChart.Series.Clear();
+            int steps = history.Count;
 
             foreach (var node in nodes)
             {
                 var series = new System.Windows.Forms.DataVisualization.Charting.Series(node.Name)
                 {
-                    ChartType = System.Windows.Forms.DataVisualization.Charting.SeriesChartType.Line
+                    ChartType = System.Windows.Forms.DataVisualization.Charting.SeriesChartType.Line,
+                    BorderWidth = 2
                 };
 
-                for (int t = 0; t < history.Count; t++)
+                // Для каждого шага добавляем точку 0 или 1
+                for (int t = 0; t < steps; t++)
                 {
                     double value = history[t].Contains(node.Name) ? 1 : 0;
                     series.Points.AddXY(t, value);
                 }
+
                 impulseChart.Series.Add(series);
             }
+
+            // Настройка осей
+            impulseChart.ChartAreas[0].AxisX.Minimum = 0;
+            impulseChart.ChartAreas[0].AxisX.Maximum = steps - 1;
+            impulseChart.ChartAreas[0].AxisY.Minimum = 0;
+            impulseChart.ChartAreas[0].AxisY.Maximum = 1;
         }
+
 
         private void SimulateButton_Click(object sender, EventArgs e)
         {
@@ -1007,37 +1032,17 @@ namespace AIGraph
             UpdateSourceNodeComboBox();
             canvasPanel.Invalidate();
         }
-        // Метод для поиска всех циклов в графе
-        private List<List<Node>> FindCycles()
+        private void DFSFindCycles(Node start, Node current, List<Node> path, HashSet<Node> visited, List<List<Node>> cycles)
         {
-            List<List<Node>> cycles = new List<List<Node>>();
-            HashSet<Node> visited = new HashSet<Node>();
-            Stack<Node> stack = new Stack<Node>();
-
-            foreach (var node in nodes)
-                DFSFindCycles(node, node, visited, stack, cycles);
-
-            // Убираем дубликаты (по набору узлов)
-            List<List<Node>> uniqueCycles = new List<List<Node>>();
-            foreach (var c in cycles)
-            {
-                bool isDuplicate = uniqueCycles.Exists(uc =>
-                    new HashSet<Node>(uc).SetEquals(c));
-                if (!isDuplicate) uniqueCycles.Add(c);
-            }
-
-            return uniqueCycles;
-        }
-
-        private void DFSFindCycles(Node start, Node current, HashSet<Node> visited, Stack<Node> path, List<List<Node>> cycles)
-        {
-            path.Push(current);
+            path.Add(current);
             visited.Add(current);
 
             foreach (var edge in edges)
             {
                 Node neighbor = null;
+
                 if (edge.From == current) neighbor = edge.To;
+                // Для ориентированного графа не смотрим на edge.To == current, если ребра направленные
 
                 if (neighbor == null) continue;
 
@@ -1048,13 +1053,50 @@ namespace AIGraph
                 }
                 else if (!visited.Contains(neighbor))
                 {
-                    DFSFindCycles(start, neighbor, visited, path, cycles);
+                    DFSFindCycles(start, neighbor, path, visited, cycles);
                 }
             }
 
-            path.Pop();
+            path.RemoveAt(path.Count - 1);
             visited.Remove(current);
         }
+
+        private string NormalizeCycle(List<Node> cycle)
+        {
+            int n = cycle.Count;
+            int minIndex = 0;
+            for (int i = 1; i < n; i++)
+                if (string.Compare(cycle[i].Name, cycle[minIndex].Name) < 0)
+                    minIndex = i;
+
+            List<string> normalized = new List<string>();
+            for (int i = 0; i < n; i++)
+                normalized.Add(cycle[(minIndex + i) % n].Name);
+
+            return string.Join("->", normalized);
+        }
+
+        private List<List<Node>> FindCycles()
+        {
+            List<List<Node>> cycles = new List<List<Node>>();
+            foreach (var node in nodes)
+                DFSFindCycles(node, node, new List<Node>(), new HashSet<Node>(), cycles);
+
+            HashSet<string> seen = new HashSet<string>();
+            List<List<Node>> uniqueCycles = new List<List<Node>>();
+            foreach (var cycle in cycles)
+            {
+                string norm = NormalizeCycle(cycle);
+                if (!seen.Contains(norm))
+                {
+                    seen.Add(norm);
+                    uniqueCycles.Add(cycle);
+                }
+            }
+            return uniqueCycles;
+        }
+
+
         private void UpdateNodeRadiusUpDown()
         {
             var selectedNodes = nodes.FindAll(n => n.Click);
@@ -1149,6 +1191,5 @@ namespace AIGraph
 
             return Math.Sqrt(distX * distX + distY * distY);
         }
-
     }
 }

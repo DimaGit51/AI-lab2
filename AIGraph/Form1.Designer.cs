@@ -76,7 +76,6 @@
             nodeRadiusUpDown.Size = new Size(150, 27);
             nodeRadiusUpDown.TabIndex = 5;
             nodeRadiusUpDown.ValueChanged += nodeRadiusUpDown_ValueChanged;
-
             // 
             // toggleChartButton
             // 
