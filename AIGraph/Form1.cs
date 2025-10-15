@@ -763,6 +763,37 @@ namespace AIGraph
                 }
             }
         }
+        /// <summary>
+        /// Подсчитывает отрицательные циклы в графе и разделяет их на чётные и нечётные.
+        /// </summary>
+        private (int evenNegative, int oddNegative) CountNegativeCycles()
+        {
+            var cycles = FindCycles();
+            int evenNeg = 0, oddNeg = 0;
+
+            foreach (var cycle in cycles)
+            {
+                double product = 1;
+                for (int i = 0; i < cycle.Count; i++)
+                {
+                    Node from = cycle[i];
+                    Node to = cycle[(i + 1) % cycle.Count];
+                    var edge = edges.Find(e => (e.From == from && e.To == to) || (e.From == to && e.To == from));
+                    if (edge != null)
+                        product *= edge.Weight;
+                }
+
+                if (product < 0) // отрицательный цикл
+                {
+                    if (cycle.Count % 2 == 0)
+                        evenNeg++;
+                    else
+                        oddNeg++;
+                }
+            }
+
+            return (evenNeg, oddNeg);
+        }
 
         private void AnalyzeGraph()
         {
@@ -779,7 +810,7 @@ namespace AIGraph
                 $"Артикуляционные вершины: {(articulationPoints.Count == 0 ? "нет" : string.Join(", ", articulationPoints.ConvertAll(n => n.Name)))}\n" +
                 $"Структурная устойчивость (по топологии): {(isTopologicallyStable ? "устойчива" : "неустойчива")}\n";
 
-            // === Вывод циклов ===
+            // === Поиск циклов ===
             var cycles = FindCycles();
             string cyclesInfo = "Найденные циклы:\n";
             if (cycles.Count == 0)
@@ -794,13 +825,20 @@ namespace AIGraph
                 }
             }
 
+            // === Подсчёт отрицательных циклов ===
+            var (evenNeg, oddNeg) = CountNegativeCycles();
+            string structuralInfo = $"Отрицательные циклы: нечётные = {oddNeg}, чётные = {evenNeg}\n" +
+                                    $"Структурная устойчивость (по отрицательным циклам нечётной длины): " +
+                                    $"{(oddNeg == 0 ? "устойчива" : "неустойчива")}\n";
+
             // === СПЕКТРАЛЬНЫЙ АНАЛИЗ ===
             string spectralInfo = AnalyzeSpectralStability();
 
             // === ИТОГ ===
-            string finalResult = topologicalInfo + cyclesInfo + "\n" + spectralInfo;
+            string finalResult = topologicalInfo + cyclesInfo + structuralInfo + "\n" + spectralInfo;
             MessageBox.Show(finalResult, "Анализ устойчивости", MessageBoxButtons.OK, MessageBoxIcon.Information);
         }
+
 
 
         private void SimulateImpulse(Node source)
